@@ -43,7 +43,7 @@ TurtlPass Firmware provides a simple and secure way of generating passwords usin
 	* No power input
 
 
-## Installation and getting started
+## 💿 Installation and getting started
 
 ### 1. Install the Arduino Legacy IDE (1.8.19)
 
@@ -69,13 +69,13 @@ The Arduino IDE 1.8.19 can be downloaded from this [link](https://www.arduino.cc
 </details>
 
 
-### 3. Install Pico Board package
+### 3. Install the Pico Board package
 
 - Go to `Tools` -> `Board` -> `Boards Manager...`
 
 - Search for "pico"
 
-- Install the package "Raspberry Pi Pico/RP 2040"
+- Install the `Raspberry Pi Pico/RP 2040` package
 
 <details>
   <summary>Screenshots</summary>
@@ -85,7 +85,7 @@ The Arduino IDE 1.8.19 can be downloaded from this [link](https://www.arduino.cc
 </details>
 
 
-### 4. Select Raspberry Pi Pico Board
+### 4. Select the Raspberry Pi Pico Board
 
 - Go to `Tools` -> `Board` -> `Raspberry Pi RP2040 Boards(1.9.5)`
 
@@ -98,6 +98,22 @@ The Arduino IDE 1.8.19 can be downloaded from this [link](https://www.arduino.cc
 </details>
 
 
+### 5. Install the Crypto library
+
+- Go to `Tools` -> `Manage Libraries...`
+
+- Search for "arduinolibs crypto"
+
+- Install the `Crypto` library
+
+<details>
+  <summary>Screenshots</summary>
+  
+<img src="assets/manage_libs.png" width="50%">
+<img src="assets/install_crypto_lib.png" width="100%">
+</details>
+
+
 ## 🔧 Generate your own seed
 
 1. Run the bash script `./generate_seed_file.sh` to generate a new seed file `Seed.cpp.<timestamp>` on a computer with macOS or Linux.
@@ -105,7 +121,7 @@ The Arduino IDE 1.8.19 can be downloaded from this [link](https://www.arduino.cc
 2. Rename the generated file to `Seed.cpp`.
 
 
-## ⬆️ Upload sketch
+## ⬆️ Upload sketch
 
 1. Open `turtlpass-firmware.ino` with Arduino IDE on a computer.
 
