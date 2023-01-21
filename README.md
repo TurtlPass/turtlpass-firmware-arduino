@@ -43,6 +43,61 @@ TurtlPass Firmware provides a simple and secure way of generating passwords usin
 	* No power input
 
 
+## Installation and getting started
+
+### 1. Install the Arduino Legacy IDE (1.8.19)
+
+The Arduino IDE 1.8.19 can be downloaded from this [link](https://www.arduino.cc/en/software)
+
+> 1.8.X version is required beforehand to ensure device drivers are installed correctly but 2.X can be used once the following steps are completed
+
+
+### 2. Install the Raspberry Pi RP2040 Boards
+
+- Open `File` -> `Preferences` -> `Settings`
+
+- Insert the following link into the **Additional Boards Manager URLs**:
+
+	> https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
+
+- Hit **OK** to close the dialog
+
+<details>
+  <summary>Screenshot</summary>
+  
+<img src="assets/additional_boards.png" width="100%">
+</details>
+
+
+### 3. Install Pico Board package
+
+- Go to `Tools` -> `Board` -> `Boards Manager...`
+
+- Search for "pico"
+
+- Install the package "Raspberry Pi Pico/RP 2040"
+
+<details>
+  <summary>Screenshots</summary>
+  
+<img src="assets/boards_manager.png" width="100%">
+<img src="assets/boards_manager_pico.png" width="100%">
+</details>
+
+
+### 4. Select Raspberry Pi Pico Board
+
+- Go to `Tools` -> `Board` -> `Raspberry Pi RP2040 Boards(1.9.5)`
+
+- And select `Raspberry Pi Pico`
+
+<details>
+  <summary>Screenshot</summary>
+  
+<img src="assets/select_pico_board.png" width="100%">
+</details>
+
+
 ## 🔧 Generate your own seed
 
 1. Run the bash script `./generate_seed_file.sh` to generate a new seed file `Seed.cpp.<timestamp>` on a computer with macOS or Linux.
@@ -51,7 +106,6 @@ TurtlPass Firmware provides a simple and secure way of generating passwords usin
 
 
 ## ⬆️ Upload sketch
-
 
 1. Open `turtlpass-firmware.ino` with Arduino IDE on a computer.
 
@@ -65,6 +119,13 @@ TurtlPass Firmware provides a simple and secure way of generating passwords usin
 
 4. The sketch should be transferred and start to run.
 
+<details>
+  <summary>Screenshots</summary>
+  
+<img src="assets/upload_firmware.png" width="50%">
+<img src="assets/upload_done.png" width="50%">
+</details>
+
 
 ## 🐞 Debugging
 
@@ -76,6 +137,13 @@ TurtlPass Firmware provides a simple and secure way of generating passwords usin
 3. You should get a response saying `OK` and the LED should be `PULSING`
 
 4. Now press the button on Pico and the password should be typed (wherever the focus is on)
+
+<details>
+  <summary>Screenshots</summary>
+  
+<img src="assets/serial_monitor_send.png" width="100%">
+<img src="assets/serial_monitor_result.png" width="100%">
+</details>
 
 
 ## 🛡️ Security
