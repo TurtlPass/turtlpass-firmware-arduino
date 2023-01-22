@@ -162,6 +162,13 @@ The Arduino IDE 1.8.19 can be downloaded from this [link](https://www.arduino.cc
 </details>
 
 
+## 💾 Backup
+
+Having multiple devices with the same seed can serve as a backup, similar to having multiple copies of your house key. One device can be kept in a secure location while another one is for daily use.
+
+Alternatively, you can store the seed file elsewhere, but it is best to let the device store the seed offline for added security.
+
+
 ## 🛡️ Security
 
 As a precaution, it is crucial to note that an individual with physical access to the device may potentially be able to compromise it, given sufficient time and effort.
