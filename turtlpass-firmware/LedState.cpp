@@ -24,7 +24,6 @@ unsigned long lastLedPulseUpdateMillis = MAX_LONG;
 
 LedState::LedState(byte pin) {
   this->pin = pin;
-  init();
 }
 
 //////////

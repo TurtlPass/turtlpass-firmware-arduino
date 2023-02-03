@@ -6,7 +6,7 @@ const uint8_t KDF_SIZE = 75; // 3/4 of 100 characters
 // KDF //
 /////////
 
-bool processKeyDerivation(uint8_t *output, size_t outputLength, char *input) {
+bool processKeyDerivation(uint8_t *output, size_t outputLength, char *input, const char* seed) {
   size_t inputLength = strlen(input);
   uint8_t *src = (uint8_t *)malloc(inputLength);
   memcpy(src, input, inputLength);

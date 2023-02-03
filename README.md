@@ -16,7 +16,7 @@ TurtlPass Firmware provides a simple and secure way of generating passwords usin
 
 * Generates unique, secure passwords from a simple input hash
 	* 100 characters long, including a combination of lowercase and uppercase letters, as well as numbers
-* Uses a seed stored in flash memory for added security
+* Seed material stored in flash memory for added security
 * Automatically types the password for you, so you don't have to
 * Erases the password from memory after use, for extra peace of mind
 * Easy to integrate into your existing projects with USB serial port connectivity
@@ -26,9 +26,9 @@ TurtlPass Firmware provides a simple and secure way of generating passwords usin
 
 <img src="assets/rpi-picos.jpg" width="100%">
 
-1. **Raspberry Pi Pico**
-2. **OTG Cable**: micro-USB (male) to USB-C (male)
-3. **Cover/Case** (optional)
+1. **RP2040 Board**: both **Raspberry Pi Pico** and **Adafruit Trinkey QT2040** have been tested ✅
+2. **USB OTG Cable / Adapter**
+3. Cover/Case (optional)
 
 
 ## 💡 LED State
@@ -41,6 +41,16 @@ TurtlPass Firmware provides a simple and secure way of generating passwords usin
 	* Typing... (fast blink)
 * `OFF`
 	* No power input
+
+
+**If your board have a RGB LED**, is possible to **switch seed** by pressing the `BOOTSEL` button on the board (in the `ON` state only). Here are the 6 available colors:
+
+1. 🟢 Green (default)
+2. 🟡 Yellow
+3. 🔴 Red
+4. 🔵 Blue
+5. ⚪ White
+6. 🟣 Magenta
 
 
 ## 💿 Installation and getting started

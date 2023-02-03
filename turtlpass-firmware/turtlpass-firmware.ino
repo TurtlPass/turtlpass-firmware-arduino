@@ -20,8 +20,18 @@
 
 #include <Arduino.h>
 #include <Keyboard.h>
+#include "Seed.h"
 #include "Kdf.h"
+
+#define BOARD_WITH_RGB_LED true // <--- COMMENT THIS LINE IF YOUR BOARD DOES NOT HAVE A RGB LED
+
+#ifdef BOARD_WITH_RGB_LED
+#include "RgbLedState.h"
+RgbLedState ledState;
+#else
 #include "LedState.h"
+LedState ledState(LED_BUILTIN);
+#endif
 
 ///////////////
 // Variables //
@@ -34,7 +44,7 @@ const uint8_t OUTPUT_SIZE = 100; // 100 characters
 char input[INPUT_BUFFER_SIZE];
 uint8_t output[OUTPUT_SIZE + 1];
 bool isExecuting = false;
-LedState ledState(LED_BUILTIN);
+int colorIndex = 0; // green
 
 /////////////
 // Methods //
@@ -53,12 +63,20 @@ void typeOutputKey();
 void setup() {
   Serial.begin(115200);
   Keyboard.begin();
+  ledState.init();
   delay(1000);
 }
 
 void loop() {
   if (BOOTSEL) {
-    typeOutputKey();
+    if (output[0] != 0) {
+      typeOutputKey();
+    } else {
+#ifdef BOARD_WITH_RGB_LED
+      colorIndex = (colorIndex + 1) % NUM_COLORS;
+      ledState.setColor(colorIndex);
+#endif
+    }
     while (BOOTSEL);
   } else {
     processSerial();
@@ -124,7 +142,7 @@ bool validateInput() {
       return false;
     }
   }
-  return processKeyDerivation(output, sizeof(output), substring);
+  return processKeyDerivation(output, sizeof(output), substring, seedArray[colorIndex]);
 }
 
 ////////////
