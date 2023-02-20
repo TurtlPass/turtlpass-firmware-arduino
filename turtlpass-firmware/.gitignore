@@ -1,0 +1,9 @@
+.DS_Store
+/.idea
+/build
+/app/build
+/.gradle
+/local.properties
+/app/plugins/internal/build/
+/app/plugins/internal/.gradle/
+/turtlpass-firmware/Seed.cpp

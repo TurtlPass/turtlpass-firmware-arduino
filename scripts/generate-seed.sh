@@ -1,12 +1,21 @@
 #!/bin/bash
-# chmod +x generate_seed_file.sh
+# chmod +x generate-seed.sh
 
 echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 echo ">>> Generating Seed.cpp file"
 echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 
+# Define the output file name
+FILE_NAME="../turtlpass-firmware/Seed.cpp"
+
+# Check if the file already exists
+if [ -e "$FILE_NAME" ]; then
+  echo "Error: $FILE_NAME already exists. Aborting."
+  exit 1
+fi
+
 SEEDS=()
-for i in {1..6}; do
+for i in {1..9}; do
   # Generate a new private key 4096 bits
   openssl genrsa -out seed.tmp 4096
   # Skip the first and last line of the private key file
@@ -18,11 +27,7 @@ for i in {1..6}; do
   rm seed.tmp
 done
 
-# Create the timestamp
-TIMESTAMP=$(date +"%Y%m%d%H%M%S")
-
 # Create the output file
-FILE_NAME="turtlpass-firmware/Seed.cpp.${TIMESTAMP}"
 touch "$FILE_NAME"
 
 # Write the contents of the file
@@ -30,7 +35,7 @@ cat > "$FILE_NAME" << EOF
 #include "Seed.h"
 EOF
 
-for i in {0..5}; do
+for i in {0..8}; do
   cat >> "$FILE_NAME" << EOF
 const char* seed$i PROGMEM = R"key(
 ${SEEDS[$i]}
@@ -38,8 +43,17 @@ ${SEEDS[$i]}
 EOF
 done
 
+# Write the seedArray using a loop
 cat >> "$FILE_NAME" << EOF
-const char* seedArray[] PROGMEM = {seed0, seed1, seed2, seed3, seed4, seed5};
+const char* seedArray[] PROGMEM = {
+EOF
+
+for i in {0..8}; do
+  echo "seed$i," >> "$FILE_NAME"
+done
+
+cat >> "$FILE_NAME" << EOF
+};
 EOF
 
 echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"

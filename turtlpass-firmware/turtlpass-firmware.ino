@@ -1,59 +1,401 @@
 // TurtlPass Firmware Arduino
 //
-// Input accepted:
+// Input (115200 baud | New Line):
 //  - prefix hash with '/'
 //  - hash lenght between 1-128 chars
 //  - hash only with hexadecimal digits
 //
-// Input example:
-//   /0
-//   /d0d80a28b90a2fb1bef0
-//   /4dff4ea340f0a823f15d3f4f01ab62eae0e5da579ccb851f8db9dfe84c58b2b37b89903a740e1ee172da793a6e79d560e5f7f9bd058a12a280433ed6fa46510a
+// Examples:
+//  - Get Board Information
+//    i
 //
-// Output:
-//   100 characters password
-//   characters type: [a-z][A-Z][0-9]
+//  - Generate Password (hex input)
+//    /4dff4ea340f0a823f15d3f4f01ab62eae0e5da579ccb851f8db9dfe84c58b2b37b89903a740e1ee172da793a6e79d560e5f7f9bd058a12a280433ed6fa46510a
 //
-// Output message:
-//   'OK' or else is an 'ERROR'
+//    Keyboard Output:
+//      100 characters password
+//      characters type: [a-z][A-Z][0-9]
 //
-
+//  - Encrypt bytes ('>', '<' to Decrypt)
+//    >4dff4ea340f0a823f15d3f4f01ab62eae0e5da579ccb851f8db9dfe84c58b2b37b89903a740e1ee172da793a6e79d560e5f7f9bd058a12a280433ed6fa46510a
+//    <byte> <byte> ...
+//
+//    Serial Output:
+//      <encrypted-byte> <encrypted-byte> ...
+//
+//  - Add new OTP shared secret to the virtual EEPROM, given a user hash and the secret
+//    +4dff4ea340f0a823f15d3f4f01ab62eae0e5da579ccb851f8db9dfe84c58b2b37b89903a740e1ee172da793a6e79d560e5f7f9bd058a12a280433ed6fa46510a:ABCDEF0123456789ABCDEF0123456789
+//
+//  - Get Otp Code With Secret From EEPROM, given a user hash and the current timestamp
+//    @4dff4ea340f0a823f15d3f4f01ab62eae0e5da579ccb851f8db9dfe84c58b2b37b89903a740e1ee172da793a6e79d560e5f7f9bd058a12a280433ed6fa46510a:1676821524
+//
+//  - Print all encrypted OTP secrets from EEPROM
+//    ?
+//
 #include <Arduino.h>
 #include <Keyboard.h>
 #include "Seed.h"
 #include "Kdf.h"
+#include "OtpManager.h"
+#include "LedManager.h"
+#include "Aes256.h"
+#include "EncryptionManager.h"
+#include "Info.h"
+#include "TTP223.h"
 
-#define BOARD_WITH_RGB_LED true // <--- COMMENT THIS LINE IF YOUR BOARD DOES NOT HAVE A RGB LED
+enum InternalState {
+  IDLE = 0,
+  TOUCHING = 1,
+  EXECUTING_CMD = 2,
+  TYPING = 3,
+  PASSWORD_READY = 4,
+  OTP_READY = 5,
+  ENCRYPTING = 6,
+  DECRYPTING = 7,
+};
+InternalState internalState = IDLE;
+LedManager ledManager;
+Kdf kdf;
+OtpManager otpManager;
+Aes256 aes256;
+EncryptionManager encryption;
 
-#ifdef BOARD_WITH_RGB_LED
-#include "RgbLedState.h"
-RgbLedState ledState;
-#else
-#include "LedState.h"
-LedState ledState(LED_BUILTIN);
-#endif
+void onSingleTouch();                                                                                     // TTP223 callback
+void onLongTouchStart();                                                                                  // TTP223 callback
+void onLongTouchEnd();                                                                                    // TTP223 callback
+void onLongTouchCancelled();                                                                              // TTP223 callback
+TTP223 ttp223(PIN_TTP223_SENSOR, onSingleTouch, onLongTouchStart, onLongTouchEnd, onLongTouchCancelled);  // initialize TTP223 instance with the callback function
 
-///////////////
-// Variables //
-///////////////
-
-const uint8_t INPUT_BUFFER_SIZE = 255;
+const uint16_t INPUT_BUFFER_SIZE = 512;
 const uint8_t MIN_INPUT_SIZE = 1;
 const uint8_t MAX_INPUT_SIZE = 128;
-const uint8_t OUTPUT_SIZE = 100; // 100 characters
 char input[INPUT_BUFFER_SIZE];
-uint8_t output[OUTPUT_SIZE + 1];
-bool isExecuting = false;
-int colorIndex = 0; // green
-
-/////////////
-// Methods //
-/////////////
+uint8_t output[PASS_SIZE + 1];
+const uint16_t ENCRYPTION_BUFFER_SIZE = 8192;
+uint8_t encryptionByteBuffer[ENCRYPTION_BUFFER_SIZE];
+const unsigned long ENCRYPTION_TIMEOUT = 300;
+unsigned long encryptionLastDataTime = 0;
+unsigned long encryptionBytesRead = 0;
 
 void processSerial(void);
 void processInput();
 bool validateInput();
-void typeOutputKey();
+void typePassword();
+void typeOtpCode();
+void readSerial();
+void waitingCommand();
+void handleCommand();
+void handleEncryption(InternalState state);
+void onEncryptionEnd();
+const char* getSelectedSeed();
+
+
+/////////////////////////
+// TTP223 TOUCH SENSOR //
+/////////////////////////
+
+void onSingleTouch() {
+  switch (internalState) {
+    case IDLE:
+      {
+        ledManager.showNextColor();
+        break;
+      }
+    case PASSWORD_READY:
+      {
+        if (output[0] != 0) {
+          typePassword();
+        }
+        break;
+      }
+    case OTP_READY:
+      {
+        if (otpManager.getCurrentOtpCode() > 0) {
+          typeOtpCode();
+        }
+        break;
+      }
+    default:
+      {
+      }
+  }
+}
+
+void onLongTouchStart() {
+  if (internalState == IDLE) {
+    internalState = TOUCHING;
+    ledManager.setFadeOutOnce(2);
+  }
+}
+
+void onLongTouchEnd() {
+  if (internalState == TOUCHING) {
+    bool result = kdf.derivatePass(output, PASS_SIZE, const_cast<char*>("default"), getSelectedSeed());
+    if (result && output[0] != 0) {
+      typePassword();
+    } else {
+      internalState = IDLE;
+    }
+  }
+}
+
+void onLongTouchCancelled() {
+  if (internalState == TOUCHING) {
+    internalState = IDLE;
+    ledManager.setOn();
+  }
+}
+
+
+///////////
+// Input //
+///////////
+
+void readSerial() {
+  switch (internalState) {
+    case IDLE:
+      {
+        waitingCommand();
+        break;
+      }
+    case EXECUTING_CMD:
+      {
+        handleCommand();
+        break;
+      }
+    case ENCRYPTING:
+      {
+        handleEncryption(ENCRYPTING);
+        break;
+      }
+    case DECRYPTING:
+      {
+        handleEncryption(DECRYPTING);
+        break;
+      }
+    default:
+      {
+      }
+  }
+}
+
+void waitingCommand() {
+  static uint16_t index = 0;
+  while (Serial.available() > 0) {
+    char readChar = Serial.read();
+    if (readChar != '\n') {
+      if (index < INPUT_BUFFER_SIZE) input[index++] = readChar;
+    } else {
+      input[index] = '\0';  // terminate the char array
+      index = 0;
+      internalState = EXECUTING_CMD;
+    }
+  }
+}
+
+void handleCommand() {
+  switch (input[0]) {
+    case 'i':
+      {
+        deviceInfo();
+        internalState = IDLE;
+        break;
+      }
+    case '/':
+      {
+        size_t inputLength = strlen(input);
+        if (inputLength <= MIN_INPUT_SIZE || inputLength > MAX_INPUT_SIZE + 1) {
+          Serial.println("<INVALID-LENGTH>");
+          internalState = IDLE;
+          break;
+        }
+        for (size_t i = 1; i < inputLength; i++) {
+          if (!isHexadecimalDigit(input[i])) {
+            Serial.println("<INVALID-HEX>");
+            internalState = IDLE;
+            break;
+          }
+        }
+        bool result = kdf.derivatePass(output, PASS_SIZE, input + 1, getSelectedSeed());
+        if (result) {
+          Serial.println("<PASSWORD-READY>");
+          ledManager.setPulsing();
+          internalState = PASSWORD_READY;
+        } else {
+          Serial.println("<PASSWORD-ERROR>");
+          internalState = IDLE;
+        }
+        break;
+      }
+    case '+':
+      {
+        bool result = otpManager.addOtpSecretToEEPROM(input + 1, getSelectedSeed());
+        if (result) {
+          Serial.println("<OTP-ADDED>");
+        } else {
+          Serial.println("<OTP-ERROR>");
+        }
+        internalState = IDLE;
+        break;
+      }
+    case '@':
+      {
+        bool result = otpManager.getOtpCodeWithSecretFromEEPROM(input + 1, getSelectedSeed());
+        if (result) {
+          ledManager.setFadeOutLoop(30, time(NULL));
+          Serial.println("<OTP-READY>");
+          internalState = OTP_READY;
+        } else {
+          Serial.println("<OTP-ERROR>");
+          internalState = IDLE;
+        }
+        break;
+      }
+    case '?':
+      {
+        bool result = otpManager.readAllSavedData();
+        internalState = IDLE;
+        break;
+      }
+    case '>':
+      {
+        bool result = encryption.init(input + 1, getSelectedSeed());
+        if (result) {
+          ledManager.setBlinking();
+          Serial.println("<ENCRYPTING>");
+          internalState = ENCRYPTING;
+        } else {
+          encryption.clear();
+          Serial.println("<ENCRYPTING-ERROR>");
+          internalState = IDLE;
+        }
+        break;
+      }
+    case '<':
+      {
+        bool result = encryption.init(input + 1, getSelectedSeed());
+        if (result) {
+          ledManager.setBlinking();
+          Serial.println("<DECRYPTING>");
+          internalState = DECRYPTING;
+        } else {
+          encryption.clear();
+          Serial.println("<DECRYPTING-ERROR>");
+          internalState = IDLE;
+        }
+        break;
+      }
+    default:
+      {
+        ledManager.setOn();
+        Serial.println("<INVALID-CMD>");
+        internalState = IDLE;
+        break;
+      }
+  }
+  // clear input and reset execution state
+  memset(input, '\0', INPUT_BUFFER_SIZE);
+}
+
+const char* getSelectedSeed() {
+  return seedArray[ledManager.getColorIndex()];
+}
+
+
+////////////////
+// Encryption //
+////////////////
+
+void handleEncryption(InternalState state) {
+  // clear the buffer before reading new data
+  memset(encryptionByteBuffer, 0, ENCRYPTION_BUFFER_SIZE);
+  // reset the last data time
+  encryptionLastDataTime = millis();
+
+  while (Serial.available() > 0 || millis() - encryptionLastDataTime < ENCRYPTION_TIMEOUT) {
+    // check if there is data available to read or if the timeout has not expired
+    if (Serial.available() > 0) {
+      size_t bytesToRead = min(Serial.available(), ENCRYPTION_BUFFER_SIZE);  // update bytesToRead
+      size_t bytesReadNow = Serial.readBytes(encryptionByteBuffer, bytesToRead);
+      encryptionBytesRead += bytesReadNow;  // increment the total number of bytes read
+
+      if (bytesReadNow > 0) {
+        // process the data (encrypt or decrypt) if bytes are read
+        switch (state) {
+          case ENCRYPTING:
+            // encrypt
+            if (!encryption.encrypt(encryptionByteBuffer, bytesReadNow)) {
+              onEncryptionEnd();
+              return;
+            }
+            break;
+          case DECRYPTING:
+            // decrypt
+            if (!encryption.decrypt(encryptionByteBuffer, bytesReadNow)) {
+              onEncryptionEnd();
+              return;
+            }
+            break;
+          default:
+            break;
+        }
+      }
+      // update the last data time
+      encryptionLastDataTime = millis();
+    } else {
+      // no data available, check for timeout
+      if (millis() - encryptionLastDataTime >= ENCRYPTION_TIMEOUT) {
+        // timeout expired, end transmission
+        onEncryptionEnd();
+        return;
+      }
+    }
+  }
+  if (encryptionBytesRead == 0) {
+    // no bytes available
+    onEncryptionEnd();
+  }
+}
+
+void onEncryptionEnd() {
+  memset(encryptionByteBuffer, 0, ENCRYPTION_BUFFER_SIZE);
+  encryptionBytesRead = 0;
+  encryption.clear();
+  ledManager.setOn();
+  internalState = IDLE;
+}
+
+
+//////////////////////
+// USB HID Keyboard //
+//////////////////////
+
+void typePassword() {
+  if (memchr(output, 0, sizeof(output)) != NULL) {
+    internalState = TYPING;
+    ledManager.setBlinking();
+    Keyboard.write(output, sizeof(output));
+    memset(output, 0, sizeof(output));
+    delay(100);  // delay blinking state
+    ledManager.setOn();
+  }
+  internalState = IDLE;
+}
+
+void typeOtpCode() {
+  uint32_t otpCode = otpManager.getCurrentOtpCode();
+  if (otpCode > 0) {
+    internalState = TYPING;
+    ledManager.setBlinking();
+    char dst[7];  // buffer to hold the 6 digit otp code (including null terminator)
+    snprintf(dst, sizeof(dst), "%06u", otpCode);
+    Keyboard.print(dst);
+    otpManager.resetCurrentOtp();
+    delay(100);  // delay blinking state
+    ledManager.setOn();
+  }
+  internalState = IDLE;
+}
 
 
 //////////////////////////
@@ -63,101 +405,28 @@ void typeOutputKey();
 void setup() {
   Serial.begin(115200);
   Keyboard.begin();
-  ledState.init();
-  delay(1000);
+  otpManager.begin(SIZE_EEPROM);
+  ttp223.begin();
 }
 
 void loop() {
-  if (BOOTSEL) {
-    if (output[0] != 0) {
-      typeOutputKey();
-    } else {
-#ifdef BOARD_WITH_RGB_LED
-      colorIndex = (colorIndex + 1) % NUM_COLORS;
-      ledState.setColor(colorIndex);
-#endif
-    }
-    while (BOOTSEL);
-  } else {
-    processSerial();
-    if (isExecuting) processInput();
-  }
+  otpManager.loop();
+  ttp223.loop(FastLED.getBrightness());
+  readSerial();
 }
+
 
 ///////////////////////////
 // Thread 1: Second core //
 ///////////////////////////
 
+void setup1() {
+  delay(1000);  // power-up safety delay
+  ledManager.setup();
+  randomSeed(analogRead(A0));
+  ledManager.setColorIndex(random(NUM_COLORS));
+}
+
 void loop1() {
-  ledState.loop();
-}
-
-///////////
-// Input //
-///////////
-
-void processSerial(void) {
-  static byte index = 0;
-  while (Serial.available() > 0 && isExecuting == false) {
-    char readChar = Serial.read();
-    if (readChar != '\n') {
-      if (index < INPUT_BUFFER_SIZE) input[index++] = readChar;
-    } else {
-      input[index] = '\0'; // terminate the char array
-      index = 0;
-      isExecuting = true;
-    }
-  }
-}
-
-void processInput() {
-  if (validateInput()) {
-    Serial.println("OK");
-    ledState.setPulsing();
-  } else {
-    Serial.println("ERROR");
-  }
-  // Clear input and reset execution state
-  memset(input, '\0', INPUT_BUFFER_SIZE);
-  isExecuting = false;
-}
-
-bool validateInput() {
-  size_t inputLength = strlen(input);
-  if (inputLength <= MIN_INPUT_SIZE || inputLength > MAX_INPUT_SIZE + 1 || input[0] != '/') {
-    Serial.println("invalid input");
-    return false;
-  }
-
-  // Calculate the length of the input string, minus one character
-  // (to skip the first character of the input string)
-  size_t length = inputLength - 1;
-  char *substring = (char *)malloc(length + 1);
-  strcpy(substring, input + 1);
-
-  // Check if valid hexadecimal input
-  for (size_t i = 0; i < length; i++) {
-    if (!isHexadecimalDigit(substring[i])) {
-      Serial.println("is not hexadecimal digit");
-      return false;
-    }
-  }
-  return processKeyDerivation(output, sizeof(output), substring, seedArray[colorIndex]);
-}
-
-////////////
-// Output //
-////////////
-
-void typeOutputKey() {
-  if (memchr(output, 0, sizeof(output)) != NULL) {
-    ledState.setBlinking();
-
-    Keyboard.write(output, sizeof(output));
-
-    delay(150); // delay blinking state
-    ledState.setOn();
-
-    memset(output, 0, sizeof(output));
-  }
+  ledManager.loop();
 }

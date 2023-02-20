@@ -2,7 +2,7 @@
 <img src="assets/icon.png" alt="logo" width=90>
 <h3 align="center">TurtlPass Firmware</h3>
 <p align="center">
-TurtlPass Firmware provides a simple and secure way of generating passwords using a deterministic key derivation function (HKDF) as specified in <a href="https://datatracker.ietf.org/doc/html/rfc5869">RFC 5869</a>.</p>
+TurtlPass Firmware offers a straightforward and secure method for creating robust passwords. It employs a deterministic key derivation function along with unique seed material stored in flash memory. Once activated with a touch, it automatically types the password for you.</p>
 <p align="center">
 <a href="https://github.com/TurtlPass/turtlpass-firmware-arduino/releases"><img src="https://img.shields.io/github/v/release/TurtlPass/turtlpass-firmware-arduino?color=green&label=Arduino%20Firmware&logo=arduino" alt="Releases"/></a>
 </p>
@@ -14,178 +14,160 @@ TurtlPass Firmware provides a simple and secure way of generating passwords usin
 
 ## ⚡ Features
 
-* Generates unique, secure passwords from a simple input hash
-	* 100 characters long, including a combination of lowercase and uppercase letters, as well as numbers
-* Seed material stored in flash memory for added security
-* Automatically types the password for you, so you don't have to
-* Erases the password from memory after use, for extra peace of mind
-* Easy to integrate into your existing projects with USB serial port connectivity
+* **Generates Secure Passwords** and **Types It for You** 
+	* Different long complex password per account
+	* *Hardware Password Generator*
+* **2FA** support (**keys** encrypted with **AES-256** in the **EEPROM**)
+	* *Two Factor Authentication*
+* **Hardware Encryption** (**bytes** encrypted with **ChaCha20** algorithm)  
+	* *File Encryption*
 
 
-## 🏗️ Hardware
+## 🏗️ Circuit Diagram
 
-<img src="assets/rpi-picos.jpg" width="100%">
+```
+  RP2040-Zero               Touch Sensor
+ +-----------+              +----------+
+ |           | GND -------- | GND      |
+ |  RGB-LED  |              |          |
+ | (GPIO 16) | GPIO 2 ----- | I/O      |
+ |           |              |          |
+ |           | 3.3V ------- | VCC      |
+ +-----------+              +----------+
+```
 
-1. **RP2040 Board**: both **Raspberry Pi Pico** and **Adafruit Trinkey QT2040** have been tested ✅
-2. **USB OTG Cable / Adapter**
-3. Cover/Case (optional)
+**Connect the Touch Sensor (TTP-223) to RP2040-Zero:**
+
+1. Connect the GND pin of the touch sensor to a ground (GND) pin on the RP2040-Zero board.
+2. Connect the I/O pin of the touch sensor to GPIO 2 on the RP2040-Zero board.
+3. Connect the VCC pin of the touch sensor to a 3.3V power source on the RP2040-Zero board.
 
 
-## 💡 LED State
+## 🔌 Plug and Play (PnP)
 
+You can connect TurtlPass to pretty much anywhere via USB. To type a default password, *long-touch* the sensor (TTP-223) until the LED fades out completly.
+
+From the security point of view, this feature is useful as it provides decoy passwords for the curious hands of strangers. From the grandma's point of view is easy-to-use as it provides very strong passwords without installing any app.
+
+
+## 💡 LED Color / Seed
+
+**Switch Seed** and **LED Color** by *single-touching* the sensor (TTP-223).
+
+__9 different color/SEED pairs available:__  
+1. 🐢 Turtle Green  
+2. ☀️ Sunny Yellow  
+3. 🍒 Cherry Red  
+4. 💙 Electric Blue  
+5. ❄️ Snow White  
+6. 🔮 Mystic Violet  
+7. 🔥 Fire Blaze  
+8. 🌊 Aqua Breeze  
+9. 🎀 Bubblegum Pink  
+
+<details>
+  <summary>💡 LED State Meaning</summary>
+  
 * `ON`
-	* Operational (default)
+	* Idle
 * `PULSING`
-	* Password ready to type
-* `BLINKING`
-	* Typing... (fast blink)
+	* Password/OTP ready to type
+* `BLINKING` (fast blink)
+	* Typing/Encryting 
 * `OFF`
 	* No power input
-
-
-**If your board have a RGB LED**, is possible to **switch seed** by pressing the `BOOTSEL` button on the board (in the `ON` state only). Here are the 6 available colors:
-
-1. 🟢 Green (default)
-2. 🟡 Yellow
-3. 🔴 Red
-4. 🔵 Blue
-5. ⚪ White
-6. 🟣 Magenta
+</details>
 
 
 ## 💿 Installation and getting started
 
-### 1. Install the Arduino Legacy IDE (1.8.19)
+### 1. INSTALL and setup `arduino-cli`
 
-The Arduino IDE 1.8.19 can be downloaded from this [link](https://www.arduino.cc/en/software)
-
-> 1.8.X version is required beforehand to ensure device drivers are installed correctly but 2.X can be used once the following steps are completed
+**Run the script** `1-click-setup.sh` to install automatically the `arduino-cli`, `RP2040 boards` and all the libraries required. 
 
 
-### 2. Install the Raspberry Pi RP2040 Boards
+### 2. SEED generation
 
-- Open `File` -> `Preferences` -> `Settings`
+**Run the script** `generate-seed.sh` to generate your own unique seed on your local machine. The output file `Seed.cpp` will be added to your codebase.
 
-- Insert the following link into the **Additional Boards Manager URLs**:
-
-	> https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
-
-- Hit **OK** to close the dialog
-
-<details>
-  <summary>Screenshot</summary>
-  
-<img src="assets/additional_boards.png" width="100%">
-</details>
+**IMPORTANT**: Make sure you delete `turtlpass-firmware/Seed.cpp` file once you're done!
 
 
-### 3. Install the Pico Board package
+### 3. BUILD your custom TurtlPass Firmware
 
-- Go to `Tools` -> `Board` -> `Boards Manager...`
+**Run the following command to compile the firmware to your RP2040 board:**
 
-- Search for "pico"
-
-- Install the `Raspberry Pi Pico/RP 2040` package
-
-<details>
-  <summary>Screenshots</summary>
-  
-<img src="assets/boards_manager.png" width="100%">
-<img src="assets/boards_manager_pico.png" width="100%">
-</details>
+```
+$ arduino-cli compile --clean \
+--fqbn "rp2040:rp2040:generic" \
+--output-dir ../turtlpass-firmware/build/ \
+--build-property "build.extra_flags=\"-D__TURTLPASS_VERSION__=\"2.0.0\"\"" \
+../turtlpass-firmware/turtlpass-firmware.ino
+```
 
 
-### 4. Select the Raspberry Pi Pico Board
+### 4. UPLOAD TurtlPass Firmware to your RP2040 Board
 
-- Go to `Tools` -> `Board` -> `Raspberry Pi RP2040 Boards(1.9.5)`
+**Run the following command to upload the firmware to your RP2040 board:**
 
-- And select `Raspberry Pi Pico`
+`$ arduino-cli upload --fqbn "rp2040:rp2040:generic" -i ../turtlpass-firmware/build/turtlpass-firmware.ino.bin -p <PORT>`
+	
+*Example:*
 
-<details>
-  <summary>Screenshot</summary>
-  
-<img src="assets/select_pico_board.png" width="100%">
-</details>
+```
+$ arduino-cli upload \
+--fqbn "rp2040:rp2040:generic" \
+-i ../turtlpass-firmware/build/turtlpass-firmware.ino.bin \
+-p /dev/cu.usbmodem14101
+```
 
-
-### 5. Install the Crypto library
-
-- Go to `Tools` -> `Manage Libraries...`
-
-- Search for "arduinolibs crypto"
-
-- Install the `Crypto` library
-
-<details>
-  <summary>Screenshots</summary>
-  
-<img src="assets/manage_libs.png" width="50%">
-<img src="assets/install_crypto_lib.png" width="100%">
-</details>
+**IMPORTANT**: Make sure you delete `turtlpass-firmware/build/` directory once you're done!
 
 
-## 🔧 Generate your own seed
+### 5. DONE! Check Serial Monitor if you want
 
-1. Run the bash script `./generate_seed_file.sh` to generate a new seed file `Seed.cpp.<timestamp>` on a computer with macOS or Linux.
+**Run the following command to start a serial communication with your RP2040 board:**
 
-2. Rename the generated file to `Seed.cpp`.
+`$ arduino-cli monitor --config baudrate=115200 -p <PORT>`
+	
+*Example:*
 
+```
+$ arduino-cli monitor \
+--config baudrate=115200 \
+-p /dev/cu.usbmodem14101
+```
 
-## ⬆️ Upload sketch
+**Then send:**
 
-1. Open `turtlpass-firmware.ino` with Arduino IDE on a computer.
-
-	> If the first time, select the appropriate **Board** and **Serial Port** in the Arduino menu `Tools`.
-
-2. Connect the Raspberry Pico to a computer with a micro-USB to USB-C cable.
-
-	> To upload your first sketch, you will need to hold the `BOOTSEL` button down while plugging in the Pico to a computer.
-
-3. Click in the `Upload` icon to upload the sketch to the Pico
-
-4. The sketch should be transferred and start to run.
-
-<details>
-  <summary>Screenshots</summary>
-  
-<img src="assets/upload_firmware.png" width="50%">
-<img src="assets/upload_done.png" width="50%">
-</details>
-
-
-## 🐞 Debugging
-
-1. Open the **Serial Monitor** console
-	> Settings: `Newline` and `115200` baud rate
-
-2. Type, for example, `/0` and send it
-
-3. You should get a response saying `OK` and the LED should be `PULSING`
-
-4. Now press the button on Pico and the password should be typed (wherever the focus is on)
-
-<details>
-  <summary>Screenshots</summary>
-  
-<img src="assets/serial_monitor_send.png" width="100%">
-<img src="assets/serial_monitor_result.png" width="100%">
-</details>
+`$ i [ENTER]`
+	
+You should get a response with the current version of the firmware.  
+	
+*Output example:* 
+	
+```
+TurtlPass Firmware Version: 2.0.0  
+Arduino Version: 10607  
+Compiler Version: 12.3.0  
+Unique Board ID: E692635B74C2374  
+```
 
 
 ## 💾 Backup
 
-Having multiple devices with the same seed can serve as a backup, similar to having multiple copies of your house key. One device can be kept in a secure location while another one is for daily use.
+Having multiple devices with the same seed can serve as a backup, similar to having multiple copies of your car key. One device can be kept in a secure location while another one is for daily use.
 
-Alternatively, you can store the seed file elsewhere, but it is best to let the device store the seed offline for added security.
+Alternatively, you can store the seed file elsewhere, but it recommended that it stays stored offline only inside a TurtlPass-RP2040 device for full security.
 
 
 ## 🛡️ Security
 
-It's important to remember that if someone has physical access to the device, they may be able to compromise it with enough time and effort. However, even if the device is compromised, it is still hard to recreate the password generated by TurtlPass without access to the hash result of the inputs, such as the PIN code, app/domain, and user account, used in the client app.
+It's important to remember that if someone has physical access to the device, they may be able to compromise the seeds with enough time and effort. However, even if the seeds are compromised, it's impossible to recreate the passwords generated by TurtlPass without access to the hash result of the inputs, such as the PIN code, app/domain, and user account (via client app).
   
   
 <details>
-  <summary>Raspberry Pi Pico</summary>
+  <summary>Cloning RP2040</summary>
   
 It is important to note that the firmware binary on the Raspberry Pi Pico RP2040 can be easily extracted using [picotool](https://github.com/raspberrypi/picotool) due to its utilization of external ROM.  
     
@@ -204,25 +186,36 @@ Wrote 369000 bytes to firmware.uf2
 Using a secure element such as the **ATECC608A/B** or **OPTIGA Trust X/M** for password generation can be a secure solution due to its physical tamper-resistance and isolation from the rest of the system. However, there are limitations to consider such as the difficulty in using them across multiple devices or platforms, and lack of backup or recovery options in case of loss or damage. Additionally, it may be difficult to manage and control access to the password in situations where multiple users need to access it.
 </details>
 
-<details>
-  <summary>Other hardware options</summary>
-  
-I am continuously exploring and evaluating new hardware options for this project. As more information and resources become available, I will keep you updated on my progress.
-</details>
+
+## 🔑 TurtlPass ≠ FIDO
+
+TurtlPass is **not** a **FIDO** Security Key and does **not** intend to be one. If you're looking for that, check [pico-fido](https://github.com/polhenarejos/pico-fido) project. **TurtlPass** is intended for **all the other websites/apps** that don't support hardware security keys, the ones with a `password` field :)
 
 
 ## 📚 Libraries
 
-* [Raspberry Pi Pico Arduino core](https://github.com/earlephilhower/arduino-pico)
-	* Port of the RP2040 (Raspberry Pi Pico processor) to the Arduino ecosystem. 
-	* It uses the bare Raspberry Pi Pico SDK and a custom GCC 10.3/Newlib 4.0 toolchain.
-	* _LGPL 2.1 license_
-* [Arduino Cryptography Library](https://github.com/rweather/arduinolibs)
-	* Libraries to perform cryptography operations on Arduino devices
-	* _MIT license_
-* [Keyboard Library for Arduino](https://github.com/arduino-libraries/Keyboard)
-	* Library allows an Arduino board with USB capabilities to act as a keyboard
-	* _LGPL 3.0 license_
+<details>
+  <summary>[Raspberry Pi Pico Arduino core](https://github.com/earlephilhower/arduino-pico)</summary>
+  
+* Port of the RP2040 (Raspberry Pi Pico processor) to the Arduino ecosystem. 
+* It uses the bare Raspberry Pi Pico SDK and a custom GCC 10.3/Newlib 4.0 toolchain.
+* _LGPL 2.1 license_
+</details>
+
+<details>
+  <summary>[Arduino Cryptography Library](https://github.com/rweather/arduinolibs)</summary>
+  
+* Libraries to perform cryptography operations on Arduino devices
+* _MIT license_
+</details>
+
+<details>
+  <summary>[Keyboard Library for Arduino](https://github.com/arduino-libraries/Keyboard)
+</summary>
+  
+* Library allows an Arduino board with USB capabilities to act as a keyboard
+* _LGPL 3.0 license_
+</details>
 
 
 ## 📄 License
