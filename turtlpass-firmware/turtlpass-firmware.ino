@@ -66,7 +66,7 @@ void onLongTouchEnd();                                                          
 void onLongTouchCancelled();                                                                              // TTP223 callback
 TTP223 ttp223(PIN_TTP223_SENSOR, onSingleTouch, onLongTouchStart, onLongTouchEnd, onLongTouchCancelled);  // initialize TTP223 instance with the callback function
 
-const uint16_t INPUT_BUFFER_SIZE = 512;
+const uint8_t INPUT_BUFFER_SIZE = 255;
 const uint8_t MIN_INPUT_SIZE = 1;
 const uint8_t MAX_INPUT_SIZE = 128;
 char input[INPUT_BUFFER_SIZE];
@@ -105,6 +105,10 @@ void onSingleTouch() {
       {
         if (output[0] != 0) {
           typePassword();
+        } else {
+          Serial.println("<PASSWORD-ERROR>");
+          ledManager.setOn();
+          internalState = IDLE;
         }
         break;
       }
@@ -134,6 +138,7 @@ void onLongTouchEnd() {
     if (result && output[0] != 0) {
       typePassword();
     } else {
+      memset(output, 0, sizeof(output));
       internalState = IDLE;
     }
   }
@@ -223,6 +228,7 @@ void handleCommand() {
           internalState = PASSWORD_READY;
         } else {
           Serial.println("<PASSWORD-ERROR>");
+          memset(output, 0, sizeof(output));
           internalState = IDLE;
         }
         break;

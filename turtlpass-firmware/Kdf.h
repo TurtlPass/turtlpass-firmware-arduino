@@ -8,12 +8,16 @@
 #include <cctype>
 #include "SHA512.h"
 #include "HKDF.h"
+#include "base62.h"
 
 #if defined(__TURTLPASS_PASS_SIZE__)
 #define PASS_SIZE __TURTLPASS_PASS_SIZE__
 #else
-#define PASS_SIZE 100 // 100 characters
+#define PASS_SIZE 100  // 100 characters
 #endif
+
+const size_t BITS_PER_BYTE = 8;
+const size_t BASE62_ENCODED_BITS = 6;
 
 class Kdf {
 public:
@@ -23,7 +27,7 @@ public:
 private:
   void hkdf(uint8_t *dst, size_t dstLength, const uint8_t *src, size_t srcLength, const uint8_t *salt, size_t saltLength);
   static void key2Charset(uint8_t *dst, const uint8_t *src, size_t srcLength);
-  static size_t base62InputLength(size_t encodedLength);
+  static uint32_t base62InputLength(size_t encodedLength);
 };
 
 #endif  // KDF_H

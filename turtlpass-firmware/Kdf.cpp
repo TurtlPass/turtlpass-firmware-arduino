@@ -1,42 +1,74 @@
 #include "Kdf.h"
 
 bool Kdf::derivatePass(uint8_t *dst, size_t dstLength, char *input, const char *seed) {
+  // validate input pointers
+  if (!dst || !input || !seed) {
+    return false;
+  }
+  // calculate the length of the input string
+  size_t inputLength = strlen(input);
+  // allocate memory for the intermediate key
   size_t keyLength = base62InputLength(dstLength);
-  uint8_t *key = (uint8_t *)malloc(keyLength + 1);
+  uint8_t *key = (uint8_t *)malloc(keyLength);
   if (key == NULL) {
     return false;  // memory allocation failed
   }
+  // derive the key using the provided input and seed
   if (!derivateKey(key, keyLength, input, seed)) {
     free(key);
     return false;
   }
-  key2Charset(dst, key, keyLength);
+  // encode the derived key using base62 encoding
+  size_t encodedKeyLength = (keyLength * 2) + 1;  // assumes worst-case scenario for encoding
+  char *encodedKey = base62_encode((char *)malloc(encodedKeyLength), encodedKeyLength, key, keyLength);
   free(key);
+  // check if base62 encoding was successful
+  if (encodedKey == NULL) {
+    return false;
+  }
+  // copy the encoded key to the destination buffer
+  strncpy((char *)dst, encodedKey, dstLength);
+  dst[dstLength] = '\0';  // ensure null-termination
+  // free allocated memory
+  free(encodedKey);
   return true;
 }
 
 bool Kdf::derivateKey(uint8_t *dst, size_t dstLength, char *input, const char *seed) {
+  // validate input pointers
+  if (!dst || !input || !seed) {
+    return false;
+  }
   size_t srcLength = strlen(input);
-  uint8_t *src = (uint8_t *)malloc(srcLength);
-  if (src == NULL) {
+  uint8_t *src = (uint8_t *)malloc(srcLength + 1);
+  if (src == nullptr) {
     return false;  // memory allocation failed
   }
   memcpy(src, input, srcLength);
   src[srcLength] = '\0';  // ensure null-terminated
-  // salt
+
   const size_t seedLength = strlen(seed);
   const size_t saltLength = seedLength / 2;
+  // allocate memory for salt
   uint8_t *salt = (uint8_t *)malloc(saltLength);
-  if (salt == NULL) {
+  if (salt == nullptr) {
     free(src);
     return false;  // memory allocation failed
   }
+  // convert seed to salt
   for (size_t i = 0; i < saltLength; i++) {
     char buf[3] = { seed[i * 2], seed[i * 2 + 1], '\0' };
-    salt[i] = (uint8_t)strtoul(buf, NULL, 16);
+    unsigned long value = strtoul(buf, NULL, 16);
+    if (value > UINT8_MAX) {
+      free(src);
+      free(salt);
+      return false;  // value exceeds uint8_t range
+    }
+    salt[i] = (uint8_t)value;
   }
-  // hkdf
+  // execute hkdf
   hkdf(dst, dstLength, src, srcLength, salt, saltLength);
+  // free allocated memory
   free(src);
   free(salt);
   return true;
@@ -44,6 +76,10 @@ bool Kdf::derivateKey(uint8_t *dst, size_t dstLength, char *input, const char *s
 
 // HMAC-based Extract-and-Expand Key Derivation Function (HKDF)
 void Kdf::hkdf(uint8_t *dst, size_t dstLength, const uint8_t *src, size_t srcLength, const uint8_t *salt, size_t saltLength) {
+  // validate input pointers
+  if (!dst || !src || !salt) {
+    return;
+  }
   // create an instance of the HKDF class using SHA-512 as the underlying hash algorithm
   HKDF<SHA512> hkdf;
   // set the key and salt values for the HKDF session
@@ -56,23 +92,7 @@ void Kdf::hkdf(uint8_t *dst, size_t dstLength, const uint8_t *src, size_t srcLen
   hkdf.clear();
 }
 
-// based on base62 encoding with 'z' char as padding instead of '='
-void Kdf::key2Charset(uint8_t *dst, const uint8_t *src, size_t srcLength) {
-  static const char *charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  // use bit manipulation operations to encode 3 bytes as 4 base62 characters
-  for (size_t i = 0; i < srcLength; i += 3) {
-    uint32_t bits = (src[i] << 16) | (src[i + 1] << 8) | src[i + 2];
-    for (size_t j = 0; j < 4; j++) {
-      if (i + j < srcLength) {
-        dst[i / 3 * 4 + j] = charset[(bits >> (6 * (3 - j))) & 0x3F];
-      } else {
-        // pad the output if the input is not a multiple of 3 bytes
-        dst[i / 3 * 4 + j] = 'z';
-      }
-    }
-  }
-}
-
-size_t Kdf::base62InputLength(size_t encodedLength) {
-  return (encodedLength * 6) / 8;  // round down to the nearest whole number
+uint32_t Kdf::base62InputLength(size_t encodedLength) {
+  // round down to the nearest whole number
+  return (encodedLength * BASE62_ENCODED_BITS) / BITS_PER_BYTE;
 }
