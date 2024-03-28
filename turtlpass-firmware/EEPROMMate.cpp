@@ -1,7 +1,7 @@
 /*
   EEPROMMate Library
 
-  Description: A library for storing key-value pairs in the EEPROM with AES-256 encryption support.
+  Description: A library for storing key-value pairs in the EEPROM.
 */
 #include "EEPROMMate.h"
 
@@ -30,20 +30,6 @@ void EEPROMMate::factoryReset() {
 
 void EEPROMMate::writeTotalUsedBytes(uint16_t value) {
   writeIntToEEPROM(0, value);
-}
-
-bool EEPROMMate::writeDataEncrypted(uint8_t* key, uint8_t keyLength, uint8_t* value, uint16_t valueLength, uint8_t* aesKey, uint8_t* aesIv) {
-  int dataLength = valueLength;
-  if ((valueLength % 16) != 0) { // keep the length multiple of 16
-    dataLength += 16 - (valueLength % 16);
-  }
-  uint8_t encryptedValue[dataLength];
-  bool encryptResult = aes256.encrypt(aesKey, aesIv, dataLength, (unsigned char*)value, encryptedValue);
-  if (!encryptResult) {
-    Serial.println("Encryption failed");
-    return false; // Encryption failed
-  }
-  return writeData(key, keyLength, encryptedValue, valueLength);
 }
 
 bool EEPROMMate::writeData(uint8_t* key, uint8_t keyLength, uint8_t* value, uint16_t valueLength) {
@@ -96,25 +82,6 @@ bool EEPROMMate::writeKeyValue(uint32_t key, uint8_t* value, uint16_t valueLengt
 
 uint16_t EEPROMMate::readTotalUsedBytes() {
   return readIntFromEEPROM(0);
-}
-
-bool EEPROMMate::readValueDecrypted(uint8_t* key, uint8_t keyLength, uint8_t* dstValue, uint16_t dstValueLength, uint8_t* aesKey, uint8_t* aesIv) {
-  uint8_t encryptedValue[dstValueLength];
-  // Read the encrypted value
-  bool result = readValue(key, keyLength, encryptedValue, dstValueLength);
-  if (!result) {
-    return false; // failed to read value
-  }
-  // uint8_t decryptedValue[dstValueLength];
-  uint8_t* decryptedValue = new uint8_t[dstValueLength];
-  bool decryptResult = aes256.decrypt(aesKey, aesIv, dstValueLength, encryptedValue, decryptedValue);
-  if (!decryptResult) {
-    return false; // decryption failed
-  }
-  // copy the decrypted value to the destination
-  memcpy(dstValue, decryptedValue, dstValueLength);
-  delete [] decryptedValue;
-  return result;
 }
 
 bool EEPROMMate::readValue(uint8_t* keyInput, uint8_t keyLength, uint8_t* dstValue, uint16_t dstValueLength) {
