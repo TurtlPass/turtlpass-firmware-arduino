@@ -38,10 +38,14 @@
 #include "Kdf.h"
 #include "OtpManager.h"
 #include "LedManager.h"
-#include "Aes256.h"
 #include "EncryptionManager.h"
 #include "Info.h"
+
+#if defined(__TURTLPASS_PIN_TTP223__)
 #include "TTP223.h"
+#else
+#include "BootselButton.h"
+#endif
 
 enum InternalState {
   IDLE = 0,
@@ -57,14 +61,19 @@ InternalState internalState = IDLE;
 LedManager ledManager;
 Kdf kdf;
 OtpManager otpManager;
-Aes256 aes256;
 EncryptionManager encryption;
 
-void onSingleTouch();                                                                                     // TTP223 callback
-void onLongTouchStart();                                                                                  // TTP223 callback
-void onLongTouchEnd();                                                                                    // TTP223 callback
-void onLongTouchCancelled();                                                                              // TTP223 callback
-TTP223 ttp223(PIN_TTP223_SENSOR, onSingleTouch, onLongTouchStart, onLongTouchEnd, onLongTouchCancelled);  // initialize TTP223 instance with the callback function
+void onSingleTouch();         // TTP223 callback
+void onLongTouchStart();      // TTP223 callback
+void onLongTouchEnd();        // TTP223 callback
+void onLongTouchCancelled();  // TTP223 callback
+
+#if defined(__TURTLPASS_PIN_TTP223__)
+TTP223 ttp223(__TURTLPASS_PIN_TTP223__, onSingleTouch, onLongTouchStart, onLongTouchEnd, onLongTouchCancelled);  // initialize TTP223 instance with the callback functions
+#else
+// if no touch sensor pin defined, fallback to bootsel button
+BootselButton bootselButton(onSingleTouch, onLongTouchStart, onLongTouchEnd, onLongTouchCancelled);  // initialize BootselButton instance with the callback functions
+#endif
 
 const uint8_t INPUT_BUFFER_SIZE = 255;
 const uint8_t MIN_INPUT_SIZE = 1;
@@ -116,6 +125,10 @@ void onSingleTouch() {
       {
         if (otpManager.getCurrentOtpCode() > 0) {
           typeOtpCode();
+        } else {
+          Serial.println("<OTP-ERROR>");
+          ledManager.setOn();
+          internalState = IDLE;
         }
         break;
       }
@@ -210,13 +223,13 @@ void handleCommand() {
       {
         size_t inputLength = strlen(input);
         if (inputLength <= MIN_INPUT_SIZE || inputLength > MAX_INPUT_SIZE + 1) {
-          Serial.println("<INVALID-LENGTH>");
+          Serial.println("<PASSWORD-INVALID-LENGTH>");
           internalState = IDLE;
           break;
         }
         for (size_t i = 1; i < inputLength; i++) {
           if (!isHexadecimalDigit(input[i])) {
-            Serial.println("<INVALID-HEX>");
+            Serial.println("<PASSWORD-INVALID-INPUT>");
             internalState = IDLE;
             break;
           }
@@ -259,7 +272,13 @@ void handleCommand() {
       }
     case '?':
       {
-        bool result = otpManager.readAllSavedData();
+        otpManager.readAllSavedData();
+        internalState = IDLE;
+        break;
+      }
+    case '*':
+      {
+        otpManager.factoryReset();
         internalState = IDLE;
         break;
       }
@@ -294,7 +313,7 @@ void handleCommand() {
     default:
       {
         ledManager.setOn();
-        Serial.println("<INVALID-CMD>");
+        Serial.println("<UNKNOWN>");
         internalState = IDLE;
         break;
       }
@@ -330,14 +349,14 @@ void handleEncryption(InternalState state) {
         switch (state) {
           case ENCRYPTING:
             // encrypt
-            if (!encryption.encrypt(encryptionByteBuffer, bytesReadNow)) {
+            if (!encryption.encrypt2serial(encryptionByteBuffer, bytesReadNow)) {
               onEncryptionEnd();
               return;
             }
             break;
           case DECRYPTING:
             // decrypt
-            if (!encryption.decrypt(encryptionByteBuffer, bytesReadNow)) {
+            if (!encryption.decrypt2serial(encryptionByteBuffer, bytesReadNow)) {
               onEncryptionEnd();
               return;
             }
@@ -412,12 +431,21 @@ void setup() {
   Serial.begin(115200);
   Keyboard.begin();
   otpManager.begin(SIZE_EEPROM);
+
+#if defined(__TURTLPASS_PIN_TTP223__)
   ttp223.begin();
+#endif
 }
 
 void loop() {
   otpManager.loop();
+
+#if defined(__TURTLPASS_PIN_TTP223__)
   ttp223.loop(FastLED.getBrightness());
+#else
+  bootselButton.loop(FastLED.getBrightness());
+#endif
+  
   readSerial();
 }
 
