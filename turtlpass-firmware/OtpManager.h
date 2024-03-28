@@ -9,21 +9,27 @@
 #include "OtpCode.h"
 #include "Seed.h"
 #include "Kdf.h"
+#include "EncryptionManager.h"
 
 class OtpManager {
   public:
-    EEPROMMate eepromMate;
-    OtpCode otp;
-    Kdf kdf;
     void begin(size_t eepromSize);
     void loop();
     uint32_t getCurrentOtpCode();
     void resetCurrentOtp();
     bool addOtpSecretToEEPROM(char *input, const char* seed);
-    bool getOtpCodeWithSecretFromEEPROM(char *input, const char* seed); //, LedController ledController
+    bool getOtpCodeWithSecretFromEEPROM(char *input, const char* seed);
     bool readAllSavedData();
-
+    bool readValueDecryptedFromEEPROM(uint8_t* key, uint8_t keyLength, uint8_t* dstValue, uint16_t dstValueLength);
+    bool writeDataEncryptedToEEPROM(uint8_t* key, uint8_t keyLength, uint8_t* value, uint16_t valueLength);
+    void factoryReset();
+    
   private:
+    EncryptionManager encryption;
+    EEPROMMate eepromMate;
+    OtpCode otp;
+    Kdf kdf;
+    bool initEncryption(char *hash, const char *seed);
     long parseTimestampAndUpdateDateTime(char *input);
     void updateSystemTime(long timestamp);
     bool readOtpSecretAndGenerateCode(char *input, uint32_t timestamp, const char* seed);

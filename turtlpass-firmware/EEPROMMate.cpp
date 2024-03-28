@@ -14,7 +14,6 @@ void EEPROMMate::begin(size_t eepromSize) {
 void EEPROMMate::commit() {
   // writes the updated data to flash, so next reboot it will be readable
   EEPROM.commit();
-  Serial.println("EEPROM.commit()");
 }
 
 void EEPROMMate::factoryReset() {
@@ -51,10 +50,11 @@ bool EEPROMMate::writeKeyValue(uint32_t key, uint8_t* value, uint16_t valueLengt
   }
   uint16_t totalUsedBytes = readTotalUsedBytes();
   if ((totalUsedBytes + sizeof(uint16_t) + sizeof(uint32_t) + valueLength) > EEPROM.length()) {
-    Serial.print("Value >>> "); Serial.println((totalUsedBytes + sizeof(uint16_t) + sizeof(uint32_t) + valueLength));
-    Serial.print("EEPROM.length() >>> "); Serial.println(EEPROM.length());
-    Serial.println("EEPROM does not have enough free space");
-    return false; // EEPROM does not have enough free space
+    Serial.println("EEPROM does not have enough free space!");
+    Serial.print((totalUsedBytes + sizeof(uint16_t) + sizeof(uint32_t) + valueLength));
+    Serial.print(" / "); 
+    Serial.println(EEPROM.length());
+    return false;
   }
   uint16_t addressEntry;
   if (totalUsedBytes == 0) { // empty
@@ -62,12 +62,12 @@ bool EEPROMMate::writeKeyValue(uint32_t key, uint8_t* value, uint16_t valueLengt
   } else {
     addressEntry = totalUsedBytes + 1;
   }
-  // Writing Length
+  // writing Length
   uint16_t entryLength = valueLength;
   writeIntToEEPROM(addressEntry, entryLength);
-  // Writing Key
+  // writing Key
   writeLongToEEPROM(addressEntry + sizeof(uint16_t), key);
-  // Writing Value
+  // writing Value
   for (uint16_t i = 0; i < valueLength; i++) {
     EEPROM.write(addressEntry + sizeof(uint16_t) + sizeof(uint32_t) + i, value[i]);
   }

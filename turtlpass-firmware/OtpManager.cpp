@@ -2,7 +2,6 @@
 
 void OtpManager::begin(size_t eepromSize) {
   eepromMate.begin(eepromSize);
-  eepromMate.factoryReset();
 }
 
 void OtpManager::loop() {
@@ -46,13 +45,33 @@ bool OtpManager::addOtpSecretToEEPROM(char *input, const char *seed) {
   char keyInput[keyLength + 1];
   char valueInput[valueLength + 1];
   splitCharArray(input, keyInput, valueInput);
+
+  if (!encryption.init(keyInput, seed)) {
+    return false;
+  }
   uint8_t *key = reinterpret_cast<uint8_t *>(keyInput);
   uint8_t *value = reinterpret_cast<uint8_t *>(valueInput);
-  uint8_t aesEncryptionKey256[AES_LENGTH];
-  uint8_t aesInitializationVector[IV_SIZE];
-  kdf.derivateKey(aesEncryptionKey256, AES_LENGTH, keyInput, seed);
-  kdf.derivateKey(aesInitializationVector, IV_SIZE, (char*)aesEncryptionKey256, seed);
-  return eepromMate.writeDataEncrypted(key, keyLength, value, valueLength, aesEncryptionKey256, aesInitializationVector);
+  bool result = writeDataEncryptedToEEPROM(key, keyLength, value, valueLength);
+  encryption.clear();
+  return result;
+}
+
+bool OtpManager::writeDataEncryptedToEEPROM(uint8_t *key, uint8_t keyLength, uint8_t *value, uint16_t valueLength) {
+  uint8_t *encryptedValue = (uint8_t *)malloc(valueLength);
+  if (encryptedValue == NULL) {
+    return false;  // memory allocation failed
+  }
+  // perform encryption
+  encryption.encrypt(encryptedValue, value, valueLength);
+  // write encrypted
+  if (!eepromMate.writeData(key, keyLength, encryptedValue, valueLength)) {
+    // failed to write
+    free(encryptedValue);
+    return false;
+  }
+  // free memory allocated for encrypted data
+  free(encryptedValue);
+  return true;
 }
 
 bool OtpManager::getOtpCodeWithSecretFromEEPROM(char *input, const char *seed) {
@@ -89,20 +108,44 @@ long OtpManager::parseTimestampAndUpdateDateTime(char *input) {
 bool OtpManager::readOtpSecretAndGenerateCode(char *input, uint32_t timestamp, const char *seed) {
   int keyLength = strlen(input);
   uint8_t *key = reinterpret_cast<uint8_t *>(input);
-  uint8_t aesEncryptionKey256[AES_LENGTH];
-  uint8_t aesInitializationVector[AES_LENGTH];
-  kdf.derivateKey(aesEncryptionKey256, AES_LENGTH, input, seed);
-  kdf.derivateKey(aesInitializationVector, IV_SIZE, (char*)aesEncryptionKey256, seed);
-
   uint16_t valueLength = eepromMate.readValueLength(key, keyLength);
   if (valueLength == -1) return false;
   uint8_t dstValue[valueLength];
-  bool readResult = eepromMate.readValueDecrypted(key, keyLength, dstValue, valueLength, aesEncryptionKey256, aesInitializationVector);
-  if (readResult) {
+
+  if (!encryption.init(input, seed)) {
+    return false;
+  }
+  bool result = readValueDecryptedFromEEPROM(key, keyLength, dstValue, valueLength);
+  if (result) {
     convertUint8ArrayToCharArray(dstValue, currentSharedSecret, valueLength);
     currentOtp = otp.generateOtpCode(currentSharedSecret, timestamp, durationOtp);
   }
-  return readResult;
+  encryption.clear();
+  return result;
+}
+
+bool OtpManager::readValueDecryptedFromEEPROM(uint8_t *key, uint8_t keyLength, uint8_t *dstValue, uint16_t dstValueLength) {
+  uint8_t *encryptedValue = (uint8_t *)malloc(dstValueLength);
+  if (encryptedValue == NULL) {
+    return false;  // memory allocation failed
+  }
+  // read the encrypted value
+  if (!eepromMate.readValue(key, keyLength, encryptedValue, dstValueLength)) {
+    free(encryptedValue);
+    return false;  // failed to read value
+  }
+  uint8_t *decryptedValue = (uint8_t *)malloc(dstValueLength);
+  if (decryptedValue == NULL) {
+    return false;  // memory allocation failed
+  }
+  // perform decryption
+  encryption.decrypt(decryptedValue, encryptedValue, dstValueLength);
+  // copy the decrypted value to the destination
+  memcpy(dstValue, decryptedValue, dstValueLength);
+  // free memory allocated
+  free(encryptedValue);
+  free(decryptedValue);
+  return true;
 }
 
 void OtpManager::updateSystemTime(long timestamp) {
@@ -114,6 +157,10 @@ void OtpManager::updateSystemTime(long timestamp) {
 
 bool OtpManager::readAllSavedData() {
   return eepromMate.readAllSavedData();
+}
+
+void OtpManager::factoryReset() {
+  eepromMate.factoryReset();
 }
 
 void OtpManager::splitCharArray(const char *src, char *dst1, char *dst2) {
