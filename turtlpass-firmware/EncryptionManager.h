@@ -19,8 +19,10 @@ class EncryptionManager {
 public:
   EncryptionManager();
   bool init(char* hash, const char* seed);
-  bool encrypt(uint8_t* src, size_t length);
-  bool decrypt(uint8_t* src, size_t length);
+  bool encrypt(uint8_t* dst, uint8_t* src, size_t length);
+  bool decrypt(uint8_t* dst, uint8_t* src, size_t length);
+  bool encrypt2serial(uint8_t* src, size_t length);
+  bool decrypt2serial(uint8_t* src, size_t length);
   void clear();
 
 private:
