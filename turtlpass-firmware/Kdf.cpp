@@ -1,5 +1,46 @@
 #include "Kdf.h"
 
+// base94
+bool Kdf::derivatePassWithSymbols(uint8_t *dst, size_t dstLength, char *input, const char *seed) {
+  // validate input pointers
+  if (!dst || !input || !seed) {
+    return false;
+  }
+  // calculate the length of the input string
+  size_t inputLength = strlen(input);
+  // allocate memory for the intermediate key
+  size_t keyLength = base94InputLength(dstLength);
+  std::vector<uint8_t> key(keyLength);
+  if (key.empty()) {
+    return false;  // Memory allocation failed
+  }
+  // derive the key using the provided input and seed
+  if (!derivateKey(key.data(), keyLength, input, seed)) {
+    return false;
+  }
+  // encode the derived key using base94 encoding
+  Base94 base94;
+  std::string encodedKey;
+  if (!base94.encode(key, encodedKey)) {
+    return false;
+  }
+  // copy the encoded key to the destination buffer
+  size_t copyLength = std::min(encodedKey.size(), dstLength);
+  std::memcpy(dst, encodedKey.data(), copyLength);
+  dst[copyLength] = '\0';  // ensure null-termination
+  return true;
+}
+
+uint32_t Kdf::base94InputLength(size_t encodedLength) {
+    // calculate the number of output blocks
+    uint32_t outputBlocks = (encodedLength + BASE94_OUTPUT_BLOCK_SIZE - 1) / BASE94_OUTPUT_BLOCK_SIZE;
+    // calculate the number of input blocks
+    uint32_t inputBlocks = outputBlocks * BASE94_INPUT_BLOCK_SIZE;
+    // return the total input length
+    return inputBlocks;
+}
+
+// base62
 bool Kdf::derivatePass(uint8_t *dst, size_t dstLength, char *input, const char *seed) {
   // validate input pointers
   if (!dst || !input || !seed) {
@@ -32,6 +73,11 @@ bool Kdf::derivatePass(uint8_t *dst, size_t dstLength, char *input, const char *
   // free allocated memory
   free(encodedKey);
   return true;
+}
+
+uint32_t Kdf::base62InputLength(size_t encodedLength) {
+  // round down to the nearest whole number
+  return (encodedLength * BASE62_ENCODED_BITS) / BITS_PER_BYTE;
 }
 
 bool Kdf::derivateKey(uint8_t *dst, size_t dstLength, char *input, const char *seed) {
@@ -90,9 +136,4 @@ void Kdf::hkdf(uint8_t *dst, size_t dstLength, const uint8_t *src, size_t srcLen
   hkdf.extract(dst, dstLength, info, infoLen);
   // clear the HKDF instance to remove any sensitive information from memory
   hkdf.clear();
-}
-
-uint32_t Kdf::base62InputLength(size_t encodedLength) {
-  // round down to the nearest whole number
-  return (encodedLength * BASE62_ENCODED_BITS) / BITS_PER_BYTE;
 }

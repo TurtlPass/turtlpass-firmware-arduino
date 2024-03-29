@@ -246,6 +246,33 @@ void handleCommand() {
         }
         break;
       }
+    case '\\':
+      {
+        size_t inputLength = strlen(input);
+        if (inputLength <= MIN_INPUT_SIZE || inputLength > MAX_INPUT_SIZE + 1) {
+          Serial.println("<PASSWORD-INVALID-LENGTH>");
+          internalState = IDLE;
+          break;
+        }
+        for (size_t i = 1; i < inputLength; i++) {
+          if (!isHexadecimalDigit(input[i])) {
+            Serial.println("<PASSWORD-INVALID-INPUT>");
+            internalState = IDLE;
+            break;
+          }
+        }
+        bool result = kdf.derivatePassWithSymbols(output, PASS_SIZE, input + 1, getSelectedSeed());
+        if (result) {
+          Serial.println("<PASSWORD-READY>");
+          ledManager.setPulsing();
+          internalState = PASSWORD_READY;
+        } else {
+          Serial.println("<PASSWORD-ERROR>");
+          memset(output, 0, sizeof(output));
+          internalState = IDLE;
+        }
+        break;
+      }
     case '+':
       {
         bool result = otpManager.addOtpSecretToEEPROM(input + 1, getSelectedSeed());
@@ -279,6 +306,7 @@ void handleCommand() {
     case '*':
       {
         otpManager.factoryReset();
+        Serial.println("<OTP-RESET>");
         internalState = IDLE;
         break;
       }
