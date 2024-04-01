@@ -33,7 +33,6 @@ class EEPROMMate {
   public:
     EEPROMMate();
     void begin(size_t eepromSize);
-    void commit();
     void factoryReset();
     bool writeData(uint8_t* key, uint8_t keyLength, uint8_t* value, uint16_t valueLength);
     bool writeKeyValue(uint32_t key, uint8_t* value, uint16_t valueLength);

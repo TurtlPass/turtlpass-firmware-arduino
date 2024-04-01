@@ -9,20 +9,9 @@ EEPROMMate::EEPROMMate() {}
 
 void EEPROMMate::begin(size_t eepromSize) {
   EEPROM.begin(eepromSize);
+
   if (readTotalUsedBytes() > eepromSize) {
-    factoryReset(); // first run
-  }
-}
-
-void EEPROMMate::commit() {
-  // writes the updated data to flash, so next reboot it will be readable
-  EEPROM.commit();
-}
-
-void EEPROMMate::factoryReset() {
-  // write 0 in all bytes of the EEPROM
-  for (uint16_t i = 0; i < EEPROM.length(); i++) {
-    EEPROM.write(i, 0);
+    factoryReset(); // reset eeprom on the first run
   }
 }
 
@@ -30,8 +19,17 @@ void EEPROMMate::factoryReset() {
 // Write //
 ///////////
 
+void EEPROMMate::factoryReset() {
+  // write 0 in all bytes of the EEPROM
+  for (uint16_t i = 0; i < EEPROM.length(); i++) {
+    EEPROM.write(i, 0);
+  }
+  EEPROM.commit();
+}
+
 void EEPROMMate::writeTotalUsedBytes(uint16_t value) {
   writeIntToEEPROM(0, value);
+  EEPROM.commit();
 }
 
 bool EEPROMMate::writeData(uint8_t* key, uint8_t keyLength, uint8_t* value, uint16_t valueLength) {
@@ -77,6 +75,31 @@ bool EEPROMMate::writeKeyValue(uint32_t key, uint8_t* value, uint16_t valueLengt
   totalUsedBytes = addressEntry + sizeof(uint16_t) + sizeof(uint32_t) + valueLength;
   writeTotalUsedBytes(totalUsedBytes);
   return true;
+}
+
+void EEPROMMate::writeIntToEEPROM(uint16_t address, uint16_t value) {
+  byte _1 = value >> 8;
+  byte _2 = value & 0xFF;
+  EEPROM.write(address, _1);
+  EEPROM.write(address + 1, _2);
+}
+
+void EEPROMMate::writeLongToEEPROM(uint16_t address, uint32_t value) {
+  if (address + 3 >= EEPROM.length()) {
+    Serial.println("Error: Address out of range");
+    return;
+  }
+  // decomposition from a long to 4 bytes by using bitshift
+  // 1 = most significant -> 4 = least significant byte
+  byte byte1 = value & 0xFF;
+  byte byte2 = (value >> 8) & 0xFF;
+  byte byte3 = (value >> 16) & 0xFF;
+  byte byte4 = (value >> 24) & 0xFF;
+  // write the 4 bytes into the simulated EEPROM memory
+  EEPROM.write(address, byte1);
+  EEPROM.write(address + 1, byte2);
+  EEPROM.write(address + 2, byte3);
+  EEPROM.write(address + 3, byte4);
 }
 
 //////////
@@ -190,10 +213,6 @@ bool EEPROMMate::readAllSavedData() {
   return true;
 }
 
-/////////////
-// PRIVATE //
-/////////////
-
 uint16_t EEPROMMate::readIntFromEEPROM(uint16_t address) {
   byte _1 = EEPROM.read(address);
   byte _2 = EEPROM.read(address + 1);
@@ -214,30 +233,9 @@ uint32_t EEPROMMate::readLongFromEEPROM(uint16_t address) {
   return (byte1) | (byte2 << 8) | (byte3 << 16) | (byte4 << 24);
 }
 
-void EEPROMMate::writeIntToEEPROM(uint16_t address, uint16_t value) {
-  byte _1 = value >> 8;
-  byte _2 = value & 0xFF;
-  EEPROM.write(address, _1);
-  EEPROM.write(address + 1, _2);
-}
-
-void EEPROMMate::writeLongToEEPROM(uint16_t address, uint32_t value) {
-  if (address + 3 >= EEPROM.length()) {
-    Serial.println("Error: Address out of range");
-    return;
-  }
-  // decomposition from a long to 4 bytes by using bitshift
-  // 1 = most significant -> 4 = least significant byte
-  byte byte1 = value & 0xFF;
-  byte byte2 = (value >> 8) & 0xFF;
-  byte byte3 = (value >> 16) & 0xFF;
-  byte byte4 = (value >> 24) & 0xFF;
-  // write the 4 bytes into the simulated EEPROM memory
-  EEPROM.write(address, byte1);
-  EEPROM.write(address + 1, byte2);
-  EEPROM.write(address + 2, byte3);
-  EEPROM.write(address + 3, byte4);
-}
+///////////
+// PRINT //
+///////////
 
 void EEPROMMate::printArrayHex(uint8_t arr[], uint16_t arrayLength) {
   for (int i = 0; i < arrayLength; i++) {
