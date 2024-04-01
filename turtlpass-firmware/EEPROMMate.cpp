@@ -9,6 +9,9 @@ EEPROMMate::EEPROMMate() {}
 
 void EEPROMMate::begin(size_t eepromSize) {
   EEPROM.begin(eepromSize);
+  if (readTotalUsedBytes() > eepromSize) {
+    factoryReset(); // first run
+  }
 }
 
 void EEPROMMate::commit() {
@@ -39,26 +42,26 @@ bool EEPROMMate::writeData(uint8_t* key, uint8_t keyLength, uint8_t* value, uint
 bool EEPROMMate::writeKeyValue(uint32_t key, uint8_t* value, uint16_t valueLength) {
   uint8_t* tmp = new uint8_t[valueLength];
   bool keyExists = readValueByKey(key, tmp, valueLength);
-  delete [] tmp;
+  delete[] tmp;
   if (keyExists) {
     Serial.println("Key already exists in the EEPROM");
-    return false; // key already exists in the EEPROM
+    return false;  // key already exists in the EEPROM
   }
   if (valueLength == 0) {
     Serial.println("Value length cannot be zero");
-    return false; // value length cannot be zero
+    return false;  // value length cannot be zero
   }
   uint16_t totalUsedBytes = readTotalUsedBytes();
   if ((totalUsedBytes + sizeof(uint16_t) + sizeof(uint32_t) + valueLength) > EEPROM.length()) {
     Serial.println("EEPROM does not have enough free space!");
     Serial.print((totalUsedBytes + sizeof(uint16_t) + sizeof(uint32_t) + valueLength));
-    Serial.print(" / "); 
+    Serial.print(" / ");
     Serial.println(EEPROM.length());
     return false;
   }
   uint16_t addressEntry;
-  if (totalUsedBytes == 0) { // empty
-    addressEntry = sizeof(uint16_t); // skip header
+  if (totalUsedBytes == 0) {          // empty
+    addressEntry = sizeof(uint16_t);  // skip header
   } else {
     addressEntry = totalUsedBytes + 1;
   }
@@ -93,7 +96,7 @@ uint16_t EEPROMMate::readValueLength(uint8_t* keyInput, uint8_t keyLength) {
   uint32_t key = fastCrc.crc32(keyInput, keyLength);
   uint16_t totalUsedBytes = readTotalUsedBytes();
   if (totalUsedBytes == 0) {
-    return -1; // there is nothing to read
+    return -1;  // there is nothing to read
   }
   uint32_t currentKey;
   uint16_t address = INDEX_FIRST_ENTRY;
@@ -101,7 +104,7 @@ uint16_t EEPROMMate::readValueLength(uint8_t* keyInput, uint8_t keyLength) {
   while (address < totalUsedBytes) {
     uint16_t entryLength = readIntFromEEPROM(address);
     if (entryLength == 0 || entryLength > totalUsedBytes) {
-      return -1; // invalid entry length
+      return -1;  // invalid entry length
     }
     currentKey = readLongFromEEPROM(address + sizeof(uint16_t));
     if (currentKey == key) {
@@ -109,16 +112,16 @@ uint16_t EEPROMMate::readValueLength(uint8_t* keyInput, uint8_t keyLength) {
     }
     address = address + sizeof(uint16_t) + sizeof(uint32_t) + entryLength + 1;
   }
-  return -1; // key not found
+  return -1;  // key not found
 }
 
-bool EEPROMMate::readValueByKey(uint32_t key, uint8_t *dstValue, uint16_t dstValueLength) {
+bool EEPROMMate::readValueByKey(uint32_t key, uint8_t* dstValue, uint16_t dstValueLength) {
   uint16_t totalUsedBytes = readTotalUsedBytes();
   if (totalUsedBytes == 0) {
-    return false; // there is nothing to read
+    return false;  // there is nothing to read
   }
   if (dstValue == NULL) {
-    return false; // destination buffer is NULL
+    return false;  // destination buffer is NULL
   }
   uint32_t currentKey;
   uint16_t address = INDEX_FIRST_ENTRY;
@@ -126,7 +129,7 @@ bool EEPROMMate::readValueByKey(uint32_t key, uint8_t *dstValue, uint16_t dstVal
   while (address < totalUsedBytes) {
     uint16_t entryLength = readIntFromEEPROM(address);
     if (entryLength == 0 || entryLength > totalUsedBytes) {
-      return false; // invalid entry length
+      return false;  // invalid entry length
     }
     currentKey = readLongFromEEPROM(address + sizeof(uint16_t));
     if (currentKey == key) {
@@ -137,7 +140,7 @@ bool EEPROMMate::readValueByKey(uint32_t key, uint8_t *dstValue, uint16_t dstVal
       }
       // check if the destination buffer is big enough to hold the data
       if (sizeof(value) > dstValueLength) {
-        return false; // destination buffer is too small
+        return false;  // destination buffer is too small
       }
       // copy the encrypted value to the destination
       memcpy(dstValue, value, sizeof(value));
@@ -145,7 +148,7 @@ bool EEPROMMate::readValueByKey(uint32_t key, uint8_t *dstValue, uint16_t dstVal
     }
     address = address + sizeof(uint16_t) + sizeof(uint32_t) + entryLength + 1;
   }
-  return false; // key not found
+  return false;  // key not found
 }
 
 bool EEPROMMate::readAllSavedData() {
