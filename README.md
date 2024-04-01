@@ -9,6 +9,7 @@ TurtlPass Firmware offers a straightforward and secure method for creating robus
 <p align="center">
 <a href="https://github.com/TurtlPass/turtlpass-android"><img src="https://img.shields.io/github/v/release/TurtlPass/turtlpass-android?color=blue&label=Android%20App&logo=android" alt="Android Repo"/></a>
 <a href="https://github.com/TurtlPass/turtlpass-chrome-extension"><img src="https://img.shields.io/github/v/release/TurtlPass/turtlpass-chrome-extension?color=blue&label=Chrome%20Extension&logo=googlechrome" alt="Chrome Extension Repo"/></a>
+<a href="https://github.com/TurtlPass/turtlpass-python"><img src="https://img.shields.io/github/v/release/TurtlPass/turtlpass-python?color=blue&label=Python%20CLI&logo=python" alt="Python CLI Repo"/></a>
 </p>
 
 
@@ -16,14 +17,15 @@ TurtlPass Firmware offers a straightforward and secure method for creating robus
 
 * **Hardware Password Generator**
   * Unlimited passwords are generated on the device
-  * Passwords are 100 characters long, including a combination of lowercase and uppercase letters, as well as numbers
+  * Passwords are 100 characters long, including a combination of lowercase and uppercase letters, as well as numbers (plus symbols if you choose to)
   * Automatically types the password for you, so you don't have to
 * **Hardware 2FA Manager**
-  * One-time passwords (OTP) are generated on the device&#x20;
+  * One-time passwords are generated on the device
   * Automatically types the OTP code whenever you're ready
-  * Shared secrets are encrypted with `AES-256` in the virtual `EEPROM`
+  * Shared secrets are encrypted with `ChaCha20` algorithm in the `EEPROM`
 * **Hardware Encryption**
   * Files encrypted on the device using the `ChaCha20` algorithm
+  * Speed: ~80 kB/s @ 133 Mhz
 
 
 ## 🏗️ Circuit Diagram
@@ -99,6 +101,19 @@ __9 different color/SEED pairs available:__
 ### 3. BUILD your custom TurtlPass Firmware
 
 **Run the following command to compile the firmware to your RP2040 board:**
+
+_Option A:_ If you have a touch sensor TTP-223 wired to the PIN number `2`
+
+```
+$ arduino-cli compile --clean \
+--fqbn "rp2040:rp2040:generic" \
+--output-dir ../turtlpass-firmware/build/ \
+--build-property "build.extra_flags=\"-D__TURTLPASS_VERSION__=\"2.0.0\"\"" \
+--build-property "build.extra_flags=\"-D__TURTLPASS_PIN_TTP223__=2\"" \
+../turtlpass-firmware/turtlpass-firmware.ino
+```
+
+_Option B:_ If you don't have a touch sensor TTP-223, fallback to built-in `BOOTSEL` button
 
 ```
 $ arduino-cli compile --clean \
