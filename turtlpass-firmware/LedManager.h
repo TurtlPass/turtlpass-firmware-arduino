@@ -2,6 +2,8 @@
 #define LED_MANAGER_H
 
 #include <Arduino.h>
+
+#define FASTLED_INTERNAL //remove annoying pragma messages
 #include <FastLED.h>
 
 #if defined(__TURTLPASS_LED_PIN__)
