@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+# PlatformIO
+.pio/
+
+# VS Code
+.vscode/
+
+# Project-specific files
+firmware.code-workspace

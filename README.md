@@ -1,211 +1,215 @@
 <p align="center">
-<img src="assets/icon.png" alt="logo" width=90>
-<h3 align="center">TurtlPass Firmware</h3>
-<p align="center">
-TurtlPass Firmware offers a straightforward and secure method for creating robust passwords. It employs a deterministic key derivation function along with unique seed material stored in flash memory. Once activated with a touch, it automatically types the password for you.</p>
-<p align="center">
-<a href="https://github.com/TurtlPass/turtlpass-firmware-arduino/releases"><img src="https://img.shields.io/github/v/release/TurtlPass/turtlpass-firmware-arduino?color=green&label=Arduino%20Firmware&logo=arduino" alt="Releases"/></a>
-</p>
-<p align="center">
-<a href="https://github.com/TurtlPass/turtlpass-android"><img src="https://img.shields.io/github/v/release/TurtlPass/turtlpass-android?color=blue&label=Android%20App&logo=android" alt="Android Repo"/></a>
-<a href="https://github.com/TurtlPass/turtlpass-chrome-extension"><img src="https://img.shields.io/github/v/release/TurtlPass/turtlpass-chrome-extension?color=blue&label=Chrome%20Extension&logo=googlechrome" alt="Chrome Extension Repo"/></a>
-<a href="https://github.com/TurtlPass/turtlpass-python"><img src="https://img.shields.io/github/v/release/TurtlPass/turtlpass-python?color=blue&label=Python%20CLI&logo=python" alt="Python CLI Repo"/></a>
+  <img src="https://raw.githubusercontent.com/TurtlPass/turtlpass-firmware-arduino/master/assets/icon.png" alt="Logo" width="133"/>
 </p>
 
+<h2 align="center">🔗 TurtlPass Ecosystem</h2>
+
+<p align="center">
+  🐢 <a href="https://github.com/TurtlPass/turtlpass-firmware-arduino"><b>Firmware</b></a> •
+  💾 <a href="https://github.com/TurtlPass/turtlpass-protobuf"><b>Protobuf</b></a> •
+  💻 <a href="https://github.com/TurtlPass/turtlpass-python"><b>Host</b></a> •
+  🌐 <a href="https://github.com/TurtlPass/turtlpass-chrome-extension"><b>Chrome</b></a> •
+  📱 <a href="https://github.com/TurtlPass/turtlpass-android"><b>Android</b></a>
+</p>
+
+---
+
+# 🐢 TurtlPass Firmware
+
+[![](https://img.shields.io/github/v/release/TurtlPass/turtlpass-firmware-arduino?color=green&label=Release&logo=arduino)](https://github.com/TurtlPass/turtlpass-firmware-arduino/releases/latest "GitHub Release")
+[![](https://img.shields.io/badge/Build-PlatformIO-blue?logo=platformio)](https://platformio.org/ "PlatformIO")
+[![](https://img.shields.io/badge/Board-RP2040%20/%20RP2350%20based-lightgrey?logo=raspberrypi)](https://www.raspberrypi.com/products/raspberry-pi-pico/ "Raspberry Pi Pico")
+[![](https://img.shields.io/badge/License-GPL%203.0-green.svg)](https://opensource.org/license/GPL-3.0 "License: GPL-3.0")
+[![](https://img.shields.io/badge/Documentation-green?label=GitBook&logo=gitbook)](https://ryanamaral.gitbook.io/turtlpass "GitBook Documentation")
+
+**TurtlPass** is a hardware-based password generator built for **simplicity, security, and portability**.
+It deterministically derives passwords from **encrypted seeds stored directly in the microcontroller’s flash**, keeping all sensitive data self-contained and offline.
+
+With a single button and integrated LED feedback, TurtlPass can **generate and type passwords directly into any device** — no software required.
+For advanced management, account-specific passwords, or seamless integration, TurtlPass connects with companion tools:
+
+* **[TurtlPass Host (Python CLI)](https://github.com/TurtlPass/turtlpass-python)** — Manage and configure TurtlPass devices via USB from the terminal.
+* **[TurtlPass Chrome Extension](https://github.com/TurtlPass/turtlpass-chrome-extension)** — Securely auto-type passwords from Chrome using your device.
+* **[TurtlPass Android](https://github.com/TurtlPass/turtlpass-android)** — Generate and auto-type passwords via USB on Android devices.
+
+---
 
 ## ⚡ Features
 
-* **Hardware Password Generator**
-  * Unlimited passwords are generated on the device
-  * Passwords are 100 characters long, including a combination of lowercase and uppercase letters, as well as numbers (plus symbols if you choose to)
-  * Automatically types the password for you, so you don't have to
-* **Hardware 2FA Manager**
-  * One-time passwords are generated on the device
-  * Automatically types the OTP code whenever you're ready
-  * Shared secrets are encrypted with `ChaCha20` algorithm in the `EEPROM`
-* **Hardware Encryption**
-  * Files encrypted on the device using the `ChaCha20` algorithm
-  * Speed: ~80 kB/s @ 133 Mhz
+### 🔐 Hardware Password Generator
 
+* **Deterministic & unique:** Generates reproducible passwords directly on the device — perfect for multiple accounts.
+* **Flexible length & complexity:** Passwords can be **1–128 characters** (default 100) and include **numbers, letters, or symbols**, like any password generator.
+* **Instant input:** Passwords are typed automatically into any active field via the device — no software required.
+* **Offline & secure:** Completely offline — no cloud, no sync, no leaks.
 
-## 🏗️ Circuit Diagram
+### 🧬 Seed Management
 
-```
-  RP2040-Zero               Touch Sensor
- +-----------+              +----------+
- |           | GND -------- | GND      |
- |  RGB-LED  |              |          |
- | (GPIO 16) | GPIO 2 ----- | I/O      |
- |           |              |          |
- |           | 3.3V ------- | VCC      |
- +-----------+              +----------+
-```
+* **Secure & encrypted:** Each seed is stored in emulated EEPROM and encrypted with **ChaCha20**.
+* **Multiple slots:** Each LED color represents a unique seed, allowing multiple identities or accounts.
+* **Reliable backups:** Backup-friendly — reflash, duplicate, or mnemonic restore.
+* **Self-contained storage:** Seeds never leave the device — no cloud storage required.
 
-**Connect the Touch Sensor (TTP-223) to RP2040-Zero:**
+### 🔌 Plug & Play Simplicity
 
-1. Connect the GND pin of the touch sensor to a ground (GND) pin on the RP2040-Zero board.
-2. Connect the I/O pin of the touch sensor to GPIO 2 on the RP2040-Zero board.
-3. Connect the VCC pin of the touch sensor to a 3.3V power source on the RP2040-Zero board.
+* **Instant usability:** Connect via USB and **long press the device button** to type your default password automatically.
+* **Intuitive controls:** Single press cycles through seed slots; long press types the password. LED colors provide clear visual feedback.
+* **Secure convenience:** Provides decoy passwords for curious onlookers while keeping strong, unique passwords at your fingertips.
+* **Cross-platform ready:** Works anywhere with USB support — no drivers or software installation required.
 
+---
 
-## 🔌 Plug and Play (PnP)
+## 🧠 Mnemonic-Based Seeds
 
-You can connect TurtlPass to pretty much anywhere via USB. To type a default password, *long-touch* the sensor (TTP-223) until the LED fades out completely.
+The **[TurtlPass Host (Python CLI)](https://github.com/TurtlPass/turtlpass-python)** allows you to create or restore **512-bit seed** from **24-word BIP-39 mnemonics** — the same standard used by many hardware wallets.
 
-From a security point of view, this feature is useful as it provides decoy passwords for the curious hands of strangers. From the grandma's point of view, is easy to use as it provides very strong passwords without installing any app.
+This provides several benefits:
 
+* **Reproducibility:** Generate the same deterministic passwords across multiple devices.
+* **Safe backups:** Store your seed securely offline on paper or metal.
+* **Device recovery:** Restore your TurtlPass device if it’s lost or damaged, using only the mnemonic.
 
-## 💡 LED Color / Seed
+---
 
-**Switch Seed** and **LED Color** by *single-touching* the sensor (TTP-223).
-
-__9 different color/SEED pairs available:__  
-1. 🐢 Turtle Green  
-2. ☀️ Sunny Yellow  
-3. 🍒 Cherry Red  
-4. 💙 Electric Blue  
-5. ❄️ Snow White  
-6. 🔮 Mystic Violet  
-7. 🔥 Fire Blaze  
-8. 🌊 Aqua Breeze  
-9. 🎀 Bubblegum Pink  
-
-<details>
-  <summary>💡 LED State Meaning</summary>
-  
-* `ON`
-	* Idle
-* `PULSING`
-	* Password/OTP ready to type
-* `BLINKING` (fast blink)
-	* Typing/Encrypting 
-* `OFF`
-	* No power input
-</details>
-
-
-## 💿 Flashing RP2040
-
-### 1. INSTALL and setup `arduino-cli`
-
-**Run the script** `1-click-setup.sh` to install automatically the `arduino-cli`, RP2040 boards, and all the libraries required. 
-
-
-### 2. SEED generation
-
-**Run the script** `generate-seed.sh` to generate your unique seed on your local machine. The output file `Seed.cpp` will be added to your codebase.
-
-**IMPORTANT**: Make sure you delete `turtlpass-firmware/Seed.cpp` file once you're done!
-
-
-### 3. BUILD your custom TurtlPass Firmware
-
-**Run the following command to compile the firmware to your RP2040 board:**
-
-_Option A:_ If you have a touch sensor TTP-223 wired to the PIN number `2`
+## 🧩 Architecture Overview
 
 ```
-$ arduino-cli compile --clean \
---fqbn "rp2040:rp2040:generic" \
---output-dir ../turtlpass-firmware/build/ \
---build-property "build.extra_flags=\"-D__TURTLPASS_VERSION__=\"2.1.0\"\"" \
---build-property "build.extra_flags=\"-D__TURTLPASS_PIN_TTP223__=2\"" \
-../turtlpass-firmware/turtlpass-firmware.ino
+┌──────────────────────────────────────────────────────────────┐
+│ User Interaction (Button / Touch)                            │
+│        │                                                     │
+│        ▼                                                     │
+│ ┌─────────────────────────────────────────────────────────┐  │
+│ │   🐢 TurtlPass Core (RP2040 / RP2350 Microcontroller)   │  │
+│ │─────────────────────────────────────────────────────────│  │
+│ │ 🔐 Seed Storage (Encrypted Flash / EEPROM)              │  │
+│ │    └─ Encrypted with ChaCha20                           │  │
+│ │    └─ Salt = Unique Board ID                            │  │
+│ │                                                         │  │
+│ │ ⚙️ Password Derivation                                  │  │
+│ │    └─ Inputs: {Seed, Domain, Account ID, PIN}           │  │
+│ │    └─ Deterministic generator                           │  │
+│ │                                                         │  │
+│ │ 🌈 LED Controller (FastLED)                             │  │
+│ │    └─ Indicates seed slot & status                      │  │
+│ │                                                         │  │
+│ │ ⌨️ USB HID Keyboard Interface                           │  │
+│ │    └─ Types password into host system                   │  │
+│ └─────────────────────────────────────────────────────────┘  │
+│        │ USB / Serial Connection                             │
+│        ▼                                                     │
+│ ┌─────────────────────────────────────────────────────────┐  │
+│ │                    Host Integrations                    │  │
+│ │  💻 Python CLI  |  🌐 Chrome Extension  |  📱 Android  │  │
+│ └─────────────────────────────────────────────────────────┘  │
+│        │                                                     │
+│        ▼                                                     │
+│ Websites / Apps / Login Fields (Password typed automatically)│
+└──────────────────────────────────────────────────────────────┘
 ```
 
-_Option B:_ If you don't have a touch sensor TTP-223, fallback to built-in `BOOTSEL` button
+---
 
-```
-$ arduino-cli compile --clean \
---fqbn "rp2040:rp2040:generic" \
---output-dir ../turtlpass-firmware/build/ \
---build-property "build.extra_flags=\"-D__TURTLPASS_VERSION__=\"2.1.0\"\"" \
-../turtlpass-firmware/turtlpass-firmware.ino
-```
+## 💡 LED Behavior
 
+Each LED color corresponds to a **unique seed slot**, providing visual feedback for selection and activity.
 
-### 4. UPLOAD TurtlPass Firmware to your RP2040 Board
+| Color     | Seed Slot |
+| :-------- | :-------- |
+| 🟢 Green  | 1         |
+| 🟡 Yellow | 2         |
+| 🔴 Red    | 3         |
+| 🔵 Blue   | 4         |
+| ⚪ White  | 5         |
+| 🟣 Violet | 6         |
+| 🟠 Orange | 7         |
+| 🩵 Aqua   | 8         |
+| 🩷 Pink   | 9         |
 
-**Run the following command to upload the firmware to your RP2040 board:**
+**Touch Controls:**
 
-`$ arduino-cli upload --fqbn "rp2040:rp2040:generic" -i ../turtlpass-firmware/build/turtlpass-firmware.ino.bin -p <PORT>`
-	
-*Example:*
+* *Single press*: Switch to the next seed/color.
+* *Long press*: Type the default password for the current seed.
 
-```
-$ arduino-cli upload \
---fqbn "rp2040:rp2040:generic" \
--i ../turtlpass-firmware/build/turtlpass-firmware.ino.bin \
--p /dev/cu.usbmodem14101
-```
+---
 
-**IMPORTANT**: Make sure you delete `turtlpass-firmware/build/` directory once you're done!
+## ✨ LED States
 
+| LED State      | Meaning            |
+| -------------- | ------------------ |
+| 💡 **ON**      | Idle               |
+| 🌟 **PULSING** | Password ready     |
+| ⚡ **BLINKING** | Typing in progress |
+| ⚫️ **OFF**     | No power           |
 
-## 💾 Backup
+---
 
-Just like having multiple copies of your car key for backup, having multiple TurtlPass-RP2040 devices with the same seed provides redundancy and peace of mind. You can keep one device in a secure location as a backup while using another one for daily use.
+## 💾 Backups
 
-Alternatively, you can store the seed file offline in a secure location, but for maximum security, it's recommended to store it only inside a TurtlPass-RP2040 device, keeping it offline and inaccessible to potential threats.
+* **Redundant storage:** Flash the same seed to multiple devices to ensure availability in case of loss or failure.
+* **Offline mnemonic:** Optionally, keep a **mnemonic of the seed offline** for secure recovery.
+* **Device-first security:** Keeping seeds only on the device is the **most secure option**, minimizing exposure to online threats.
 
+---
 
-## 🛡️ Security
+## 🛡️ Security Notes
 
-It's important to remember that if someone has physical access to the device, they may be able to compromise the seeds with enough time and effort. However, even if the seeds are compromised, it's impossible to recreate the passwords generated by TurtlPass without access to the hash result of the inputs, such as the PIN code, Domain Name, and Account ID (via the client app).
-  
-  
-<details>
-  <summary>Cloning RP2040</summary>
-  
-It is important to note that the firmware binary on the Raspberry Pi Pico RP2040 can be easily extracted using [picotool](https://github.com/raspberrypi/picotool) due to its utilization of external ROM.  
-    
-Example of how to do just that:
+* **Strong, deterministic passwords:** Even with physical access, extracting the seed alone is **not enough** to reproduce passwords.
+* **Unique per account:** Passwords are derived from a combination of **seed, domain, account ID, and user PIN**, ensuring uniqueness and irrecoverability.
+* **Offline-first security:** All cryptographic operations occur **on-device**, eliminating cloud exposure and minimizing attack surfaces.
+* **Optional backups:** Redundant seeds or offline mnemonics provide recovery options without compromising security.
 
-```
+---
+
+## 📥 Cloning the RP2040
+
+The RP2040 firmware can be extracted using [**picotool**](https://github.com/raspberrypi/picotool):
+
+```bash
 $ picotool save firmware.uf2
 Saving file: [==============================]  100%
 Wrote 369000 bytes to firmware.uf2
 ```
-</details>
 
-<details>
-  <summary>Secure Element (SE)</summary>
-  
-Using a secure element such as the **ATECC608A/B** or **OPTIGA Trust X/M** for password generation can be a secure solution due to its physical tamper-resistance and isolation from the rest of the system. However, there are limitations to consider such as the difficulty in using them across multiple devices or platforms, and lack of backup or recovery options in case of loss or damage. Additionally, it may be difficult to manage and control access to the password in situations where multiple users need to access it.
-</details>
+> **Note:** Extracting the firmware does not allow backup of the seed, as it is encrypted using the unique board ID. Passwords also cannot be recreated from the firmware alone, since they are derived from a combination of seed, domain, account ID, and user PIN, ensuring irrecoverability.
 
+---
 
-## 🔑 TurtlPass ≠ FIDO
+## ⬇️ Download
 
-TurtlPass is **not** a **FIDO** Security Key and does **not** intend to be one. If you're looking for that, check [pico-fido](https://github.com/polhenarejos/pico-fido) project. **TurtlPass** is intended for **all the other websites/apps** that don't support hardware security keys, the ones with a `password` field :)
+If you own a **Raspberry Pi Pico (RP2040 or RP2350)**, you can download the precompiled **UF2 file** for your board from the [**Releases page**](https://github.com/TurtlPass/turtlpass-firmware-arduino/releases).
 
+UF2 files are shipped with TurtlPass-specific USB VID/PID settings. You may customize these values if you build TurtlPass Firmware from source, but **do not distribute binaries using a VID/PID you do not own**.
 
-## 📚 Libraries
+> **Note:** The VID `0x1209` and PID `0xFA55` are registered to TurtlPass. Changing them allows custom identification but must comply with USB VID/PID regulations.
 
-<details>
-  <summary>[Raspberry Pi Pico Arduino core](https://github.com/earlephilhower/arduino-pico)</summary>
-  
-* Port of the RP2040 (Raspberry Pi Pico processor) to the Arduino ecosystem. 
-* It uses the bare Raspberry Pi Pico SDK and a custom GCC 10.3/Newlib 4.0 toolchain.
-* _LGPL 2.1 license_
-</details>
+---
 
-<details>
-  <summary>[Arduino Cryptography Library](https://github.com/rweather/arduinolibs)</summary>
-  
-* Libraries to perform cryptography operations on Arduino devices
-* _MIT license_
-</details>
+## 🧑‍💻 Building from Source
 
-<details>
-  <summary>[Keyboard Library for Arduino](https://github.com/arduino-libraries/Keyboard)
-</summary>
-  
-* Library allows an Arduino board with USB capabilities to act as a keyboard
-* _LGPL 3.0 license_
-</details>
+TurtlPass Firmware uses **[PlatformIO](https://platformio.org/)** for building, flashing, and dependency management.
+Power users and developers can build and flash **custom versions** tailored to their boards or preferences.
 
+For step-by-step instructions, see the full guide: [**BUILD.md**](./BUILD.md)
 
-## 📄 License
+---
 
-TurtlPass Firmware is released under the [GPL 3.0 license](https://github.com/TurtlPass/turtlpass-firmware-arduino/blob/main/LICENSE).
+## 📚 Dependencies
+
+TurtlPass Firmware relies on the following libraries and platforms:
+
+* **Arduino-Pico** – [Earle Philhower’s core](https://github.com/earlephilhower/arduino-pico) for RP2040 Arduino support
+* **RP2040 Platform** – [Max Gerhardt’s fork](https://github.com/maxgerhardt/platform-raspberrypi) for additional board support
+* [Arduino Cryptography Library](https://github.com/rweather/arduinolibs) – Provides cryptographic primitives for Arduino devices
+* [FastLED](https://github.com/FastLED/FastLED) – Library for controlling RGB LEDs
+* [nanopb](https://github.com/nanopb/nanopb) – Protocol Buffers implementation for embedded systems
+* [Base32-Decode](https://github.com/ekscrypto/Base32/) – Library for Base32 encoding/decoding
+* [Base62](https://github.com/ericherman/base62) – Library for Base62 encoding/decoding
+* [Base94](https://github.com/Holmojan/base94) – Library for Base94 encoding/decoding
+
+> **Credits:** Thanks to the maintainers of these open-source projects for enabling secure, portable, and efficient firmware development.
+
+---
+
+## 📜 License
+
+This repository is licensed under the [GPL 3.0 license](./LICENSE).
