@@ -1,6 +1,7 @@
 #ifndef BOOTSEL_BUTTON_H
 #define BOOTSEL_BUTTON_H
 
+#include <Arduino.h>
 #include "ui/LedManager.h"
 
 #define LONG_PRESS_DURATION 500        ///< Duration in ms to detect a long press

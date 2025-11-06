@@ -8,8 +8,8 @@
 #include "pb_decode.h"
 #include "proto/turtlpass.pb.h"
 
-#if defined(__TURTLPASS_VERSION__)
-#define TURTLPASS_VERSION __TURTLPASS_VERSION__
+#if defined(TP_VERSION)
+#define TURTLPASS_VERSION TP_VERSION
 #else
 #define TURTLPASS_VERSION "development"
 #endif

@@ -6,8 +6,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#if defined(__TURTLPASS_EEPROM_SIZE__)
-#define EEPROM_SIZE __TURTLPASS_EEPROM_SIZE__
+#if defined(TP_EEPROM_SIZE)
+#define EEPROM_SIZE TP_EEPROM_SIZE
 #else
 #define EEPROM_SIZE 4096
 #endif

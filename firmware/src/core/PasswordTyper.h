@@ -3,7 +3,7 @@
 
 #include "ui/LedManager.h"
 #include <cstdint>
-
+#include <cstddef>
 
 /**
  * @brief Handles typing passwords via HID keyboard and LED feedback.

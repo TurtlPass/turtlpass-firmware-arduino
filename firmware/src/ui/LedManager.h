@@ -1,54 +1,17 @@
-#ifndef LED_MANAGER_H
-#define LED_MANAGER_H
+#pragma once
 
-#include <FastLED.h>
-#include <cmath>  // for pow()
+#include <stdint.h>
+#include "ui/driver/ILedDriver.h"
 
-#if defined(__TURTLPASS_LED_PIN__)
-#define LED_PIN __TURTLPASS_LED_PIN__
-#else
-#define LED_PIN LED_BUILTIN
-#endif
-
-#if defined(__TURTLPASS_LED_IS_RGB__)
-#define LED_IS_RGB __TURTLPASS_LED_IS_RGB__
-#else
-#define LED_IS_RGB false
-#endif
-
-#if defined(__TURTLPASS_LED_TYPE__)
-#define LED_TYPE __TURTLPASS_LED_TYPE__
-#else
-#define LED_TYPE WS2812
-#endif
-
-#define COLOR_ORDER GRB
-#define BRIGHTNESS 255
-#define NUM_LEDS 1
-#define NUM_COLORS 9  ///< Number of predefined colors, matches number of seed slots
-
-/// Predefined RGB colors for LED cycling
-const CRGB colors[NUM_COLORS] = {
-  CRGB::Green,
-  CRGB::Yellow,
-  CRGB::Red,
-  CRGB::Blue,
-  CRGB::White,
-  CRGB::BlueViolet,
-  CRGB::OrangeRed,
-  CRGB::Aqua,
-  CRGB::DeepPink,
-};
-
-#define DEFAULT_FADE_AMOUNT 3
-#define DEFAULT_BRIGHTNESS 255
-#define MAX_LONG 1410065407
 #define LED_UPDATES_PER_SECOND 100
+#define FADE_AMOUNT 3
+#define MAX_BRIGHTNESS 255
+#define MAX_LONG 1410065407
 
 
 /**
  * @class LedManager
- * @brief Handles LED control for single or RGB LEDs with multiple effects.
+ * @brief High-level controller for LED effects and animations.
  *
  * Supports the following states:
  *  - OFF
@@ -58,24 +21,33 @@ const CRGB colors[NUM_COLORS] = {
  *  - Fade-out once
  *  - Fade-out loop (clock synced)
  *
- * Provides control over color, brightness, and visual effects, including
- * exponential fading.
+ * The LedManager provides platform-independent control over color, 
+ * brightness, and visual effects, including exponential fading.
+ * 
+ * It delegates the actual LED control to a hardware-specific
+ * implementation of the ILedDriver interface (e.g., FastLED, CYW43, etc).
  */
 class LedManager {
 public:
     /**
-     * @brief Constructor. Initializes LED state and default parameters.
+     * @brief Construct a new LedManager.
+     * @param driver Pointer to a hardware-specific LED driver implementation.
+     *
+     * The driver is not owned by LedManager; it must remain valid
+     * for the lifetime of this object.
      */
-    LedManager();
+    explicit LedManager(ILedDriver* driver);
 
     /**
-     * @brief Initializes the LED hardware and FastLED library.
+     * @brief Initializes the LED hardware and resets animation state.
      */
     void begin();
 
     /**
-     * @brief Updates the LED state and applies visual effects.
-     * Should be called repeatedly in the main loop.
+     * @brief Periodically updates LED brightness and effects.
+     *
+     * This should be called regularly inside the main loop to maintain
+     * smooth animations (e.g., every 10–20 ms).
      */
     void loop();
 
@@ -127,24 +99,19 @@ public:
      * @brief Get the current color index.
      * @return Current color index (0..NUM_COLORS-1).
      */
-    uint8_t getColorIndex();
+    uint8_t getColorIndex() const;
 
     /**
      * @brief Get the current LED brightness.
      * @return Current brightness (0..255).
      */
-    uint8_t getCurrentBrightness();
-
-    /**
-     * @brief Compute and get new brightness based on current state/effect.
-     * @return Computed brightness (0..255).
-     */
-    uint8_t getNewBrightness();
+    uint8_t getCurrentBrightness() const;
 
 private:
-    CRGB leds[NUM_LEDS];  ///< Array of LEDs (single or RGB)
-
-    /// Internal LED states
+    /**
+     * @enum State
+     * @brief Represents internal animation states for the LED.
+     */
     enum State {
         LED_OFF = 0,          ///< LED is off
         LED_ON = 1,           ///< LED is on at full brightness
@@ -154,21 +121,31 @@ private:
         LED_FADE_OUT_LOOP = 5 ///< LED fades out repeatedly
     };
 
-    /// Struct for managing LED parameters and state
+    /**
+     * @struct Led
+     * @brief Internal structure holding LED parameters and state.
+     */
     struct Led {
-        uint8_t colorIndex;             ///< Current color index
-        uint8_t brightness;             ///< Current brightness (0..255)
-        int fadeAmount;                 ///< Fade increment/decrement for pulsing/fade
-        int blinkState;                 ///< Current blink state (on/off)
-        int blinkSpeed;                 ///< Blink update interval in ms
-        int pulseSpeed;                 ///< Pulse update interval in ms
-        unsigned long lastUpdate;       ///< Timestamp of last update
-        unsigned long fadeOutStartTime; ///< Timestamp when fade out started
-        unsigned long fadeOutDuration;  ///< Fade out duration in ms
-        State state;                    ///< Current LED state/effect
-    };
+        uint8_t colorIndex = 0;                 ///< Current color index
+        uint8_t brightness = 255;               ///< Current brightness (0..255)
+        int fadeAmount = 3;                     ///< Fade increment/decrement for pulsing/fade
+        int blinkState = 0;                     ///< Current blink state (on/off)
+        int blinkSpeed = 60;                    ///< Blink update interval in ms
+        int pulseSpeed = 6;                     ///< Pulse update interval in ms
+        unsigned long lastUpdate = MAX_LONG;    ///< Timestamp of last update
+        unsigned long fadeOutStartTime = 0;     ///< Timestamp when fade out started
+        unsigned long fadeOutDuration = 0;      ///< Fade out duration in ms
+        State state = LED_ON;                   ///< Current LED state/effect
+    } led;
 
-    Led led;  ///< Instance of LED struct
+    ILedDriver* driver;         ///< Hardware-specific LED driver instance.
+    uint32_t lastLoopTime = 0;  ///< Timestamp of the last main loop update.
+
+    /**
+     * @brief Compute the next brightness value based on current animation.
+     * @return The new brightness (0–255).
+     */
+    uint8_t getNewBrightness();
 
     /**
      * @brief Maps a value from one range to another using an exponential curve.
@@ -182,6 +159,7 @@ private:
      * @return Mapped value.
      */
     int mapExponentially(float value, float inMin, float inMax, float outMin, float outMax);
-};
 
-#endif  // LED_MANAGER_H
+    static const uint8_t NUM_COLORS = 9;        ///< Number of predefined color presets.
+    static const uint8_t colors[NUM_COLORS][3]; ///< RGB lookup table for color presets.
+};
